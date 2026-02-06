@@ -1,30 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
   <defs>
-    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#e879f9;stop-opacity:1" />
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#22d3ee;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#c084fc;stop-opacity:1" />
     </linearGradient>
-    <filter id="glow">
-      <feGaussianBlur stdDeviation="10" result="coloredBlur"/>
-      <feMerge>
-        <feMergeNode in="coloredBlur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
   </defs>
-  <rect width="512" height="512" fill="#020617" />
-
-  <!-- Central Geometry: Triangle intersection with Wave -->
-  <g transform="translate(256, 256)" filter="url(#glow)">
-    <!-- Triangle -->
-    <path d="M0 -180 L160 140 L-160 140 Z" fill="none" stroke="url(#grad1)" stroke-width="12" />
-
-    <!-- Frequency Wave running through -->
-    <path d="M-200 0 C-100 -100, -50 100, 0 0 S 100 -100, 200 0" fill="none" stroke="#ffffff" stroke-width="8" opacity="0.8" />
-
-    <!-- Circles/Nodes -->
-    <circle cx="0" cy="-60" r="15" fill="#06b6d4" />
-    <circle cx="-80" cy="60" r="10" fill="#e879f9" />
-    <circle cx="80" cy="60" r="10" fill="#e879f9" />
-  </g>
+  <path d="M50 5 L89 27.5 L89 72.5 L50 95 L11 72.5 L11 27.5 Z" stroke="url(#grad)" fill="#0f172a" stroke-width="2"/>
+  <path d="M20 50 Q35 20 50 50 Q65 80 80 50" stroke="#c084fc" stroke-width="4" fill="none" />
+  <circle cx="50" cy="50" r="5" fill="#22d3ee" />
 </svg>
