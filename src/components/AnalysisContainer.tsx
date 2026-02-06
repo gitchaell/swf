@@ -1,12 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { NeonViewer } from './NeonViewer';
+import { Analytics } from "@vercel/analytics/react";
 import { Upload, FileText, Download, Activity, Globe, Zap, Languages } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { cn } from '../lib/utils';
+import { Button } from './ui/button';
 
 type Language = 'ES' | 'PT' | 'EN';
 type Mode = 'SYMBOLOGY' | 'FREQUENCY';
@@ -63,24 +60,32 @@ export const AnalysisContainer = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black text-slate-100 font-sans selection:bg-cyan-500/30">
+    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/30">
+      <Analytics />
       {/* Header */}
-      <header className="fixed top-0 w-full z-10 bg-black/80 backdrop-blur-md border-b border-white/10 p-4">
+      <header className="fixed top-0 w-full z-10 bg-background/80 backdrop-blur-md border-b border-border p-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <Activity className="text-cyan-400 w-6 h-6 animate-pulse" />
-            <h1 className="text-xl font-bold tracking-wider bg-gradient-to-r from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent">
-              NEON<span className="text-white">NEXUS</span>
-            </h1>
+            <Activity className="text-primary w-6 h-6 animate-pulse" />
+            <div className="flex flex-col">
+              <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent leading-tight">
+                SIMBOLOGIAS Y FRECUENCIAS DE ONDA - DAKILA
+              </h1>
+              <p className="text-[10px] text-muted-foreground font-mono tracking-wide">
+                Herramienta basada en información oficial de Dakila construida no oficialmente
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-4">
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setLanguage(l => l === 'EN' ? 'ES' : l === 'ES' ? 'PT' : 'EN')}
-              className="flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 hover:border-cyan-500/50 transition-colors text-xs font-mono"
+              className="flex items-center gap-2 font-mono text-xs border-border hover:border-primary/50"
             >
               <Globe className="w-3 h-3" />
               {language}
-            </button>
+            </Button>
           </div>
         </div>
       </header>
@@ -89,9 +94,9 @@ export const AnalysisContainer = () => {
       <main className="pt-20 h-screen flex flex-col md:flex-row overflow-hidden">
 
         {/* Left: 3D Viewer */}
-        <div className="relative w-full md:w-1/2 h-[40vh] md:h-full bg-slate-900 border-b md:border-b-0 md:border-r border-white/10">
+        <div className="relative w-full md:w-1/2 h-[40vh] md:h-full bg-secondary/10 border-b md:border-b-0 md:border-r border-border">
           <div className="absolute top-4 left-4 z-10 flex gap-2">
-            <div className="px-2 py-1 bg-black/50 backdrop-blur rounded text-xs font-mono text-cyan-400 border border-cyan-900">
+            <div className="px-2 py-1 bg-background/50 backdrop-blur rounded text-xs font-mono text-primary border border-primary/50">
               VISUALIZER_V1.0
             </div>
             {mode === 'FREQUENCY' && (
@@ -105,16 +110,17 @@ export const AnalysisContainer = () => {
 
           {/* Controls overlay */}
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-4">
-            <button
+            <Button
               onClick={() => fileInputRef.current?.click()}
-              className="group relative px-6 py-2 bg-black/60 backdrop-blur-md border border-white/20 hover:border-cyan-400 text-sm rounded-full transition-all overflow-hidden"
+              variant="secondary"
+              className="rounded-full pl-6 pr-8 border border-white/10 hover:border-primary transition-all relative overflow-hidden group"
             >
               <span className="relative z-10 flex items-center gap-2">
-                <Upload className="w-4 h-4 group-hover:text-cyan-400 transition-colors" />
+                <Upload className="w-4 h-4 group-hover:text-primary transition-colors" />
                 UPLOAD_SOURCE
               </span>
-              <div className="absolute inset-0 bg-cyan-500/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-            </button>
+              <div className="absolute inset-0 bg-primary/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+            </Button>
             <input
               type="file"
               ref={fileInputRef}
@@ -126,15 +132,15 @@ export const AnalysisContainer = () => {
         </div>
 
         {/* Right: Analysis & Chat */}
-        <div className="w-full md:w-1/2 h-[60vh] md:h-full flex flex-col bg-black">
+        <div className="w-full md:w-1/2 h-[60vh] md:h-full flex flex-col bg-background">
 
           {/* Mode Switcher */}
-          <div className="flex border-b border-white/10">
+          <div className="flex border-b border-border">
             <button
               onClick={() => setMode('SYMBOLOGY')}
               className={cn(
-                "flex-1 py-4 text-sm tracking-widest font-mono transition-colors hover:bg-white/5",
-                mode === 'SYMBOLOGY' ? "text-cyan-400 border-b-2 border-cyan-400" : "text-slate-500"
+                "flex-1 py-4 text-sm tracking-widest font-mono transition-colors hover:bg-secondary/20",
+                mode === 'SYMBOLOGY' ? "text-primary border-b-2 border-primary" : "text-muted-foreground"
               )}
             >
               SYMBOLOGY
@@ -142,8 +148,8 @@ export const AnalysisContainer = () => {
             <button
               onClick={() => setMode('FREQUENCY')}
               className={cn(
-                "flex-1 py-4 text-sm tracking-widest font-mono transition-colors hover:bg-white/5",
-                mode === 'FREQUENCY' ? "text-fuchsia-400 border-b-2 border-fuchsia-400" : "text-slate-500"
+                "flex-1 py-4 text-sm tracking-widest font-mono transition-colors hover:bg-secondary/20",
+                mode === 'FREQUENCY' ? "text-fuchsia-400 border-b-2 border-fuchsia-400" : "text-muted-foreground"
               )}
             >
               FREQUENCY
@@ -153,7 +159,7 @@ export const AnalysisContainer = () => {
           {/* Response Area */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {!response && !loading && (
-                <div className="h-full flex flex-col items-center justify-center text-slate-700 space-y-4 opacity-50">
+                <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-4 opacity-50">
                     <Zap className="w-12 h-12" />
                     <p className="font-mono text-sm">AWAITING INPUT DATA...</p>
                 </div>
@@ -161,16 +167,16 @@ export const AnalysisContainer = () => {
 
             {loading && (
                 <div className="space-y-4 animate-pulse">
-                    <div className="h-4 bg-white/5 rounded w-3/4"></div>
-                    <div className="h-4 bg-white/5 rounded w-1/2"></div>
-                    <div className="h-4 bg-white/5 rounded w-5/6"></div>
-                    <p className="text-cyan-500 font-mono text-xs pt-4">ACCESSING DAKILA ARCHIVES...</p>
+                    <div className="h-4 bg-secondary rounded w-3/4"></div>
+                    <div className="h-4 bg-secondary rounded w-1/2"></div>
+                    <div className="h-4 bg-secondary rounded w-5/6"></div>
+                    <p className="text-primary font-mono text-xs pt-4">ACCESSING DAKILA ARCHIVES...</p>
                 </div>
             )}
 
             {response && (
-                <div className="prose prose-invert prose-p:text-slate-300 prose-headings:text-cyan-400 max-w-none">
-                    <div className="font-mono text-xs text-slate-500 mb-4 border-b border-white/10 pb-2">
+                <div className="prose prose-invert prose-p:text-foreground prose-headings:text-primary max-w-none">
+                    <div className="font-mono text-xs text-muted-foreground mb-4 border-b border-border pb-2">
                         ANALYSIS COMPLETE // CONFIDENCE: 98.4%
                     </div>
                     <div dangerouslySetInnerHTML={{ __html: response.replace(/\n/g, '<br/>') }} />
@@ -179,24 +185,25 @@ export const AnalysisContainer = () => {
           </div>
 
           {/* Action Footer */}
-          <div className="p-6 border-t border-white/10 bg-black/50">
+          <div className="p-6 border-t border-border bg-background/50">
              <div className="flex gap-4">
-                <button
+                <Button
                     onClick={handleAnalyze}
                     disabled={!image || loading}
-                    className="flex-1 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-lg font-bold tracking-wide transition-all shadow-[0_0_20px_rgba(8,145,178,0.4)] hover:shadow-[0_0_30px_rgba(8,145,178,0.6)] flex items-center justify-center gap-2"
+                    className="flex-1 py-6 font-bold tracking-wide shadow-[0_0_20px_rgba(8,145,178,0.2)] hover:shadow-[0_0_30px_rgba(8,145,178,0.4)]"
                 >
-                    {loading ? <Activity className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                    {loading ? <Activity className="w-4 h-4 animate-spin mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
                     INITIATE ANALYSIS
-                </button>
+                </Button>
 
-                <button
+                <Button
                     onClick={downloadPDF}
                     disabled={!response}
-                    className="px-4 border border-white/20 rounded-lg hover:bg-white/10 disabled:opacity-30 transition-colors"
+                    variant="outline"
+                    className="px-4 py-6"
                 >
                     <Download className="w-5 h-5" />
-                </button>
+                </Button>
              </div>
           </div>
         </div>
