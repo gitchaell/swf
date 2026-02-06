@@ -1,53 +1,17 @@
 ---
+import { AnalysisContainer } from '../components/AnalysisContainer';
+import '../styles/global.css';
 ---
 
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
 		<meta name="viewport" content="width=device-width" />
 		<meta name="generator" content={Astro.generator} />
-		<title>Mastra with Astro</title>
+		<title>NeonNexus: Symbology & Frequency</title>
 	</head>
-	<body>
-		<h1>Mastra Agent</h1>
-        <form id="agent-form">
-            <input type="text" id="message" name="message" placeholder="Ask about weather..." required />
-            <button type="submit">Ask</button>
-        </form>
-        <div id="response"></div>
-
-        <script>
-            const form = document.getElementById('agent-form');
-            const responseDiv = document.getElementById('response');
-
-            if (form) {
-                form.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    if (!responseDiv) return;
-
-                    const formData = new FormData(form as HTMLFormElement);
-                    const message = formData.get('message');
-
-                    responseDiv.innerText = 'Thinking...';
-
-                    try {
-                        const res = await fetch('/api/ask', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({ message }),
-                        });
-                        const data = await res.json();
-                        responseDiv.innerText = data.text;
-                    } catch (error) {
-                        console.error(error);
-                        responseDiv.innerText = 'Error occurred.';
-                    }
-                });
-            }
-        </script>
+	<body class="bg-black text-white m-0 p-0 overflow-hidden">
+		<AnalysisContainer client:only="react" />
 	</body>
 </html>
