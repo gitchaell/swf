@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { NeonViewer } from './NeonViewer';
 import { Analytics } from "@vercel/analytics/react";
 import { Upload, FileText, Download, Activity, Globe, Zap, Languages } from 'lucide-react';
@@ -10,7 +10,9 @@ type Mode = 'SYMBOLOGY' | 'FREQUENCY';
 
 const translations = {
   EN: {
-    title: "SIMBOLOGIAS Y FRECUENCIAS DE ONDA - DAKILA",
+    title: "Simbologías y Frecuencias de Onda - Dakila",
+    description: "Tool based on official Dakila information built unofficially for symbology and frequency analysis.",
+    headerTitle: "SIMBOLOGIAS Y FRECUENCIAS DE ONDA - DAKILA",
     subtitle: "Herramienta basada en información oficial de Dakila construida no oficialmente",
     visualizer: "VISUALIZER_V1.0",
     waveAnalysis: "WAVE_ANALYSIS",
@@ -25,7 +27,9 @@ const translations = {
     errorAnalysis: "An error occurred during analysis."
   },
   ES: {
-    title: "SIMBOLOGÍAS Y FRECUENCIAS DE ONDA - DAKILA",
+    title: "Simbologías y Frecuencias de Onda - Dakila",
+    description: "Herramienta basada en información oficial de Dakila construida no oficialmente para el análisis de simbologías y frecuencias.",
+    headerTitle: "SIMBOLOGÍAS Y FRECUENCIAS DE ONDA - DAKILA",
     subtitle: "Herramienta basada en información oficial de Dakila construida no oficialmente",
     visualizer: "VISUALIZADOR_V1.0",
     waveAnalysis: "ANÁLISIS_ONDA",
@@ -40,7 +44,9 @@ const translations = {
     errorAnalysis: "Ocurrió un error durante el análisis."
   },
   PT: {
-    title: "SIMBOLOGIAS E FREQUÊNCIAS DE ONDA - DAKILA",
+    title: "Simbologias e Frequências de Onda - Dakila",
+    description: "Ferramenta baseada em informações oficiais da Dakila construída não oficialmente para análise de simbologias e frequências.",
+    headerTitle: "SIMBOLOGIAS E FREQUÊNCIAS DE ONDA - DAKILA",
     subtitle: "Ferramenta baseada em informações oficiais da Dakila construída não oficialmente",
     visualizer: "VISUALIZADOR_V1.0",
     waveAnalysis: "ANÁLISE_ONDA",
@@ -66,6 +72,23 @@ export const AnalysisContainer = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const t = translations[language];
+
+  // Effect to update SEO Title and Description
+  useEffect(() => {
+    document.title = t.title;
+
+    // Update meta description
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) {
+      metaDescription.setAttribute('content', t.description);
+    } else {
+      // Create if it doesn't exist (though it should from index.astro)
+      const meta = document.createElement('meta');
+      meta.name = "description";
+      meta.content = t.description;
+      document.head.appendChild(meta);
+    }
+  }, [language, t]);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -119,7 +142,7 @@ export const AnalysisContainer = () => {
             <Activity className="text-primary w-6 h-6 animate-pulse" />
             <div className="flex flex-col">
               <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent leading-tight">
-                {t.title}
+                {t.headerTitle}
               </h1>
               <p className="text-[10px] text-muted-foreground font-mono tracking-wide">
                 {t.subtitle}
