@@ -4,53 +4,52 @@ import { put } from "@vercel/blob";
 import { createClient } from "@vercel/edge-config";
 
 // Initialize Edge Config (Connection setup as requested)
-// Note: Edge Config is primarily for reading configuration data.
 const edgeConfig = createClient(process.env.EDGE_CONFIG);
 
 export const POST: APIRoute = async ({ request }) => {
 	try {
 		const formData = await request.formData();
-		const imageFile = formData.get("image") as File;
+		const imageFile = formData.get("image") as File | null;
 		const language = (formData.get("language") as string) || "EN";
 		const mode = (formData.get("mode") as string) || "SYMBOLOGY";
+		const message = formData.get("message") as string | null;
+		let threadId = formData.get("threadId") as string | null;
+		let resourceId = formData.get("resourceId") as string | null;
 
-		if (!imageFile) {
-			return new Response(JSON.stringify({ error: "No image provided" }), { status: 400 });
+		// Generate IDs if not provided
+		if (!resourceId) resourceId = crypto.randomUUID();
+		if (!threadId) threadId = crypto.randomUUID();
+
+		if (!imageFile && !message) {
+			return new Response(JSON.stringify({ error: "No image or message provided" }), { status: 400 });
 		}
 
 		// 1. Process Image - Upload to Vercel Blob
-		// This replaces the local buffer handling/placeholder logic
 		let publicUrl = "";
-		let buffer: Buffer;
+		let buffer: Buffer | undefined;
 
-		try {
-			// We still need the buffer for the agent if it doesn't support URL directly yet,
-			// or we can pass the URL if the agent tool supports it.
-			// Assuming we upload to Blob for persistence/logging and pass buffer/url to agent.
-			buffer = Buffer.from(await imageFile.arrayBuffer());
+		if (imageFile) {
+			try {
+				buffer = Buffer.from(await imageFile.arrayBuffer());
 
-			const blob = await put(imageFile.name, imageFile, {
-				access: "public",
-				token: process.env.BLOB_READ_WRITE_TOKEN, // Ensure this env var is set in Vercel
-			});
-			publicUrl = blob.url;
-		} catch (uploadError) {
-			console.error("Blob upload failed:", uploadError);
-			// Fallback or just proceed if buffer is available, but we need to warn.
-			// If blob fails (e.g. missing token), we continue with the analysis using the buffer.
-			buffer = Buffer.from(await imageFile.arrayBuffer());
+				const blob = await put(imageFile.name, imageFile, {
+					access: "public",
+					token: process.env.BLOB_READ_WRITE_TOKEN,
+				});
+				publicUrl = blob.url;
+			} catch (uploadError) {
+				console.error("Blob upload failed:", uploadError);
+				buffer = Buffer.from(await imageFile.arrayBuffer());
+			}
 		}
 
 		// 2. Edge Config Interaction
-		// We can read a configuration value, e.g., to check if the service is active.
-		// This demonstrates the connection.
 		try {
 			const isActive = await edgeConfig.get("service_active");
 			if (isActive === false) {
 				return new Response(JSON.stringify({ error: "Service is currently under maintenance." }), { status: 503 });
 			}
 		} catch (configError) {
-			// Ignore config errors if not set up
 			console.warn("Edge Config read failed", configError);
 		}
 
@@ -58,36 +57,62 @@ export const POST: APIRoute = async ({ request }) => {
 		const agent = mastra.getAgent("symbologyAgent");
 
 		// Construct Prompt
-		const prompt = `Analyze this image in the context of ${mode}.
+		let prompt = "";
+		if (imageFile && !message) {
+			prompt = `Analyze this image in the context of ${mode}.
     Respond in ${language}.
     If Mode is SYMBOLOGY: Identify geometric patterns (straight lines vs curves) and relate to the Dakila knowledge base.
     If Mode is FREQUENCY: Analyze the visual wave patterns or colors as frequencies.
     `;
+		} else if (imageFile && message) {
+			prompt = `Analyze this image in the context of ${mode}.
+    Respond in ${language}.
+    User Message: ${message}
+    If Mode is SYMBOLOGY: Identify geometric patterns (straight lines vs curves) and relate to the Dakila knowledge base.
+    If Mode is FREQUENCY: Analyze the visual wave patterns or colors as frequencies.
+    `;
+		} else if (message) {
+			// Chat follow-up
+			prompt = `${message} (Respond in ${language})`;
+		}
+
+		const content: any[] = [{ type: "text", text: prompt }];
+		if (buffer) {
+			content.push({ type: "image", image: buffer });
+		}
 
 		let result;
 		try {
-			result = await agent.generate([
+			result = await agent.generate(
+				[
+					{
+						role: "user",
+						content: content,
+					},
+				],
 				{
-					role: "user",
-					content: [
-						{ type: "text", text: prompt },
-						// Pass the buffer (or URL if supported by specific agent integration).
-						// Using buffer is safer for immediate processing without downloading again.
-						{ type: "image", image: buffer },
-					],
+					memory: {
+						resource: resourceId,
+						thread: threadId,
+					},
 				},
-			]);
+			);
 		} catch (agentError) {
 			console.error("Agent generation failed", agentError);
 			return new Response(JSON.stringify({ error: "Agent analysis failed" }), { status: 500 });
 		}
 
-		// 4. Response
-		// We no longer save to Prisma.
-
-		return new Response(JSON.stringify({ text: result.text, imageUrl: publicUrl }), {
-			headers: { "Content-Type": "application/json" },
-		});
+		return new Response(
+			JSON.stringify({
+				text: result.text,
+				imageUrl: publicUrl,
+				threadId,
+				resourceId,
+			}),
+			{
+				headers: { "Content-Type": "application/json" },
+			},
+		);
 	} catch (error) {
 		console.error(error);
 		return new Response(JSON.stringify({ error: "Internal Server Error" }), { status: 500 });

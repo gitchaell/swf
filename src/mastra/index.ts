@@ -1,10 +1,15 @@
 import { Mastra } from "@mastra/core";
-import { LibSQLVector } from "@mastra/libsql";
+import { LibSQLVector, LibSQLStore } from "@mastra/libsql";
 import { VercelDeployer } from "@mastra/deployer-vercel";
 import { symbologyAgent } from "./agent";
 
 const vectorStore = new LibSQLVector({
 	id: "vector-store",
+	url: ":memory:",
+});
+
+const storage = new LibSQLStore({
+	id: "mastra-storage",
 	url: ":memory:",
 });
 
@@ -39,5 +44,6 @@ const vectorStore = new LibSQLVector({
 export const mastra = new Mastra({
 	agents: { symbologyAgent },
 	vectors: { vectorStore },
+	storage,
 	deployer: new VercelDeployer(),
 });
