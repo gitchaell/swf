@@ -7,14 +7,14 @@
   Run "astro telemetry disable" to opt-out.
   https://astro.build/telemetry
 
-16:09:46 [types] Generated 1ms
-16:09:46 [content] Syncing content
-16:09:46 [content] Synced content
+16:53:23 [types] Generated 1ms
+16:53:23 [content] Syncing content
+16:53:23 [content] Synced content
 
- astro  v5.17.1 ready in 462 ms
+ astro  v5.17.1 ready in 527 ms
 
 ┃ Local    http://localhost:4321/
 ┃ Network  use --host to expose
 
-16:09:46 watching for file changes...
-16:10:43 [200] / 127ms
+16:53:23 watching for file changes...
+16:54:24 [200] / 167ms
