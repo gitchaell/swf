@@ -1,9 +1,11 @@
 import type { APIRoute } from 'astro';
 import { mastra } from '../../mastra';
-import { PrismaClient } from '../../generated/prisma/client'; // Import from generated path
+import { put } from '@vercel/blob';
+import { createClient } from '@vercel/edge-config';
 
-// Initialize Prisma
-const prisma = new PrismaClient();
+// Initialize Edge Config (Connection setup as requested)
+// Note: Edge Config is primarily for reading configuration data.
+const edgeConfig = createClient(process.env.EDGE_CONFIG);
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -16,27 +18,40 @@ export const POST: APIRoute = async ({ request }) => {
       return new Response(JSON.stringify({ error: 'No image provided' }), { status: 400 });
     }
 
-    // 1. Process Image
-    const buffer = Buffer.from(await imageFile.arrayBuffer());
-    // On Vercel (serverless), we cannot save to the local filesystem persistently.
-    // For a real production app, upload to S3/Blob storage here.
-    // We will proceed with the buffer for analysis.
-    const publicUrl = `https://placeholder.com/image-uploaded`; // Placeholder since we can't save locally on Vercel
+    // 1. Process Image - Upload to Vercel Blob
+    // This replaces the local buffer handling/placeholder logic
+    let publicUrl = '';
+    let buffer: Buffer;
 
-    // 2. Create Session in DB (Mocking DB interactions if Postgres isn't running)
-    let sessionId = 'mock-session-id';
     try {
-        const session = await prisma.session.create({
-            data: {
-                language: language as any,
-                images: {
-                    create: { url: publicUrl }
-                }
-            }
+        // We still need the buffer for the agent if it doesn't support URL directly yet,
+        // or we can pass the URL if the agent tool supports it.
+        // Assuming we upload to Blob for persistence/logging and pass buffer/url to agent.
+        buffer = Buffer.from(await imageFile.arrayBuffer());
+
+        const blob = await put(imageFile.name, imageFile, {
+            access: 'public',
+            token: process.env.BLOB_READ_WRITE_TOKEN // Ensure this env var is set in Vercel
         });
-        sessionId = session.id;
-    } catch (dbError) {
-        console.warn("DB Create failed (likely no DB running), proceeding with mock ID", dbError);
+        publicUrl = blob.url;
+    } catch (uploadError) {
+        console.error("Blob upload failed:", uploadError);
+        // Fallback or just proceed if buffer is available, but we need to warn.
+        // If blob fails (e.g. missing token), we continue with the analysis using the buffer.
+        buffer = Buffer.from(await imageFile.arrayBuffer());
+    }
+
+    // 2. Edge Config Interaction
+    // We can read a configuration value, e.g., to check if the service is active.
+    // This demonstrates the connection.
+    try {
+        const isActive = await edgeConfig.get('service_active');
+        if (isActive === false) {
+             return new Response(JSON.stringify({ error: 'Service is currently under maintenance.' }), { status: 503 });
+        }
+    } catch (configError) {
+        // Ignore config errors if not set up
+        console.warn("Edge Config read failed", configError);
     }
 
     // 3. Call Mastra Agent
@@ -49,20 +64,15 @@ export const POST: APIRoute = async ({ request }) => {
     If Mode is FREQUENCY: Analyze the visual wave patterns or colors as frequencies.
     `;
 
-    // Agent generation
-    // passing the image buffer directly if supported, or assuming text analysis for now if multimodal isn't straightforward in this version
-    // The previous agent setup supports 'content' array for multimodal.
-
     let result;
     try {
-        // We attempt to pass the image. If Mastra/AI SDK supports standard array content:
         result = await agent.generate([
             {
                 role: 'user',
                 content: [
                     { type: 'text', text: prompt },
-                    // Assuming Mastra supports image buffer or url.
-                    // For local file, we might need to convert to base64 or pass as data url.
+                    // Pass the buffer (or URL if supported by specific agent integration).
+                    // Using buffer is safer for immediate processing without downloading again.
                     { type: 'image', image: buffer }
                 ]
             }
@@ -72,20 +82,10 @@ export const POST: APIRoute = async ({ request }) => {
         return new Response(JSON.stringify({ error: 'Agent analysis failed' }), { status: 500 });
     }
 
-    // 4. Save Response to DB
-    try {
-        await prisma.message.create({
-            data: {
-                sessionId,
-                role: 'assistant',
-                content: result.text
-            }
-        });
-    } catch (dbError) {
-        console.warn("DB Save failed");
-    }
+    // 4. Response
+    // We no longer save to Prisma.
 
-    return new Response(JSON.stringify({ text: result.text }), {
+    return new Response(JSON.stringify({ text: result.text, imageUrl: publicUrl }), {
       headers: { 'Content-Type': 'application/json' },
     });
 

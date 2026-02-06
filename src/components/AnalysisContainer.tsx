@@ -8,6 +8,54 @@ import { Button } from './ui/button';
 type Language = 'ES' | 'PT' | 'EN';
 type Mode = 'SYMBOLOGY' | 'FREQUENCY';
 
+const translations = {
+  EN: {
+    title: "SIMBOLOGIAS Y FRECUENCIAS DE ONDA - DAKILA",
+    subtitle: "Herramienta basada en información oficial de Dakila construida no oficialmente",
+    visualizer: "VISUALIZER_V1.0",
+    waveAnalysis: "WAVE_ANALYSIS",
+    uploadSource: "UPLOAD_SOURCE",
+    symbology: "SYMBOLOGY",
+    frequency: "FREQUENCY",
+    awaitingInput: "AWAITING INPUT DATA...",
+    accessingArchives: "ACCESSING DAKILA ARCHIVES...",
+    analysisComplete: "ANALYSIS COMPLETE // CONFIDENCE: 98.4%",
+    initiateAnalysis: "INITIATE ANALYSIS",
+    error: "Error",
+    errorAnalysis: "An error occurred during analysis."
+  },
+  ES: {
+    title: "SIMBOLOGÍAS Y FRECUENCIAS DE ONDA - DAKILA",
+    subtitle: "Herramienta basada en información oficial de Dakila construida no oficialmente",
+    visualizer: "VISUALIZADOR_V1.0",
+    waveAnalysis: "ANÁLISIS_ONDA",
+    uploadSource: "SUBIR_FUENTE",
+    symbology: "SIMBOLOGÍA",
+    frequency: "FRECUENCIA",
+    awaitingInput: "ESPERANDO DATOS DE ENTRADA...",
+    accessingArchives: "ACCEDIENDO A ARCHIVOS DAKILA...",
+    analysisComplete: "ANÁLISIS COMPLETADO // CONFIANZA: 98.4%",
+    initiateAnalysis: "INICIAR ANÁLISIS",
+    error: "Error",
+    errorAnalysis: "Ocurrió un error durante el análisis."
+  },
+  PT: {
+    title: "SIMBOLOGIAS E FREQUÊNCIAS DE ONDA - DAKILA",
+    subtitle: "Ferramenta baseada em informações oficiais da Dakila construída não oficialmente",
+    visualizer: "VISUALIZADOR_V1.0",
+    waveAnalysis: "ANÁLISE_ONDA",
+    uploadSource: "CARREGAR_FONTE",
+    symbology: "SIMBOLOGIA",
+    frequency: "FREQUÊNCIA",
+    awaitingInput: "AGUARDANDO DADOS DE ENTRADA...",
+    accessingArchives: "ACESSANDO ARQUIVOS DAKILA...",
+    analysisComplete: "ANÁLISE COMPLETA // CONFIANÇA: 98.4%",
+    initiateAnalysis: "INICIAR ANÁLISE",
+    error: "Erro",
+    errorAnalysis: "Ocorreu um erro durante a análise."
+  }
+};
+
 export const AnalysisContainer = () => {
   const [language, setLanguage] = useState<Language>('EN');
   const [mode, setMode] = useState<Mode>('SYMBOLOGY');
@@ -16,6 +64,8 @@ export const AnalysisContainer = () => {
   const [response, setResponse] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const t = translations[language];
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -42,13 +92,13 @@ export const AnalysisContainer = () => {
       });
       const data = await res.json();
       if (data.error) {
-          setResponse('Error: ' + data.error);
+          setResponse(t.error + ': ' + data.error);
       } else {
           setResponse(data.text);
       }
     } catch (error) {
       console.error(error);
-      setResponse('An error occurred during analysis.');
+      setResponse(t.errorAnalysis);
     } finally {
       setLoading(false);
     }
@@ -69,10 +119,10 @@ export const AnalysisContainer = () => {
             <Activity className="text-primary w-6 h-6 animate-pulse" />
             <div className="flex flex-col">
               <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent leading-tight">
-                SIMBOLOGIAS Y FRECUENCIAS DE ONDA - DAKILA
+                {t.title}
               </h1>
               <p className="text-[10px] text-muted-foreground font-mono tracking-wide">
-                Herramienta basada en información oficial de Dakila construida no oficialmente
+                {t.subtitle}
               </p>
             </div>
           </div>
@@ -97,11 +147,11 @@ export const AnalysisContainer = () => {
         <div className="relative w-full md:w-1/2 h-[40vh] md:h-full bg-secondary/10 border-b md:border-b-0 md:border-r border-border">
           <div className="absolute top-4 left-4 z-10 flex gap-2">
             <div className="px-2 py-1 bg-background/50 backdrop-blur rounded text-xs font-mono text-primary border border-primary/50">
-              VISUALIZER_V1.0
+              {t.visualizer}
             </div>
             {mode === 'FREQUENCY' && (
                 <div className="px-2 py-1 bg-fuchsia-900/20 backdrop-blur rounded text-xs font-mono text-fuchsia-400 border border-fuchsia-900 animate-pulse">
-                WAVE_ANALYSIS
+                {t.waveAnalysis}
                 </div>
             )}
           </div>
@@ -117,7 +167,7 @@ export const AnalysisContainer = () => {
             >
               <span className="relative z-10 flex items-center gap-2">
                 <Upload className="w-4 h-4 group-hover:text-primary transition-colors" />
-                UPLOAD_SOURCE
+                {t.uploadSource}
               </span>
               <div className="absolute inset-0 bg-primary/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
             </Button>
@@ -143,7 +193,7 @@ export const AnalysisContainer = () => {
                 mode === 'SYMBOLOGY' ? "text-primary border-b-2 border-primary" : "text-muted-foreground"
               )}
             >
-              SYMBOLOGY
+              {t.symbology}
             </button>
             <button
               onClick={() => setMode('FREQUENCY')}
@@ -152,7 +202,7 @@ export const AnalysisContainer = () => {
                 mode === 'FREQUENCY' ? "text-fuchsia-400 border-b-2 border-fuchsia-400" : "text-muted-foreground"
               )}
             >
-              FREQUENCY
+              {t.frequency}
             </button>
           </div>
 
@@ -161,7 +211,7 @@ export const AnalysisContainer = () => {
             {!response && !loading && (
                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-4 opacity-50">
                     <Zap className="w-12 h-12" />
-                    <p className="font-mono text-sm">AWAITING INPUT DATA...</p>
+                    <p className="font-mono text-sm">{t.awaitingInput}</p>
                 </div>
             )}
 
@@ -170,14 +220,14 @@ export const AnalysisContainer = () => {
                     <div className="h-4 bg-secondary rounded w-3/4"></div>
                     <div className="h-4 bg-secondary rounded w-1/2"></div>
                     <div className="h-4 bg-secondary rounded w-5/6"></div>
-                    <p className="text-primary font-mono text-xs pt-4">ACCESSING DAKILA ARCHIVES...</p>
+                    <p className="text-primary font-mono text-xs pt-4">{t.accessingArchives}</p>
                 </div>
             )}
 
             {response && (
                 <div className="prose prose-invert prose-p:text-foreground prose-headings:text-primary max-w-none">
                     <div className="font-mono text-xs text-muted-foreground mb-4 border-b border-border pb-2">
-                        ANALYSIS COMPLETE // CONFIDENCE: 98.4%
+                        {t.analysisComplete}
                     </div>
                     <div dangerouslySetInnerHTML={{ __html: response.replace(/\n/g, '<br/>') }} />
                 </div>
@@ -193,7 +243,7 @@ export const AnalysisContainer = () => {
                     className="flex-1 py-6 font-bold tracking-wide shadow-[0_0_20px_rgba(8,145,178,0.2)] hover:shadow-[0_0_30px_rgba(8,145,178,0.4)]"
                 >
                     {loading ? <Activity className="w-4 h-4 animate-spin mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
-                    INITIATE ANALYSIS
+                    {t.initiateAnalysis}
                 </Button>
 
                 <Button
