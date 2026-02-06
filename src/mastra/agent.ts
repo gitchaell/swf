@@ -1,59 +1,35 @@
 import { Agent } from "@mastra/core/agent";
-import fs from "fs";
-import path from "path";
-import { createRequire } from "module";
-
-const require = createRequire(import.meta.url);
-const pdf = require("pdf-parse");
+import { ModelRouterEmbeddingModel } from "@mastra/core/llm";
+import { createVectorQueryTool } from "@mastra/rag";
 
 // Explicitly check for API Key to ensure it is configured
 if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
 	throw new Error("GOOGLE_GENERATIVE_AI_API_KEY is not set in environment variables.");
 }
 
-export async function getKnowledgeBase() {
-	const dataDir = path.join(process.cwd(), "data");
-	// Ensure directory exists
-	if (!fs.existsSync(dataDir)) {
-		return "";
-	}
-
-	const files = fs.readdirSync(dataDir).filter((file) => file.endsWith(".pdf") || file.endsWith(".md"));
-	let context = "";
-
-	for (const file of files) {
-		try {
-			const filePath = path.join(dataDir, file);
-			const dataBuffer = fs.readFileSync(filePath);
-
-			if (file.endsWith(".pdf")) {
-				if (dataBuffer.length > 0) {
-					const data = await pdf(dataBuffer);
-					context += `\n--- Content from ${file} ---\n${data.text}\n`;
-				}
-			} else if (file.endsWith(".md")) {
-				const text = dataBuffer.toString("utf-8");
-				context += `\n--- Content from ${file} ---\n${text}\n`;
-			}
-		} catch (error) {
-			console.warn(`Failed to read ${file}`, error);
-		}
-	}
-	return context;
-}
+const vectorQueryTool = createVectorQueryTool({
+	vectorStoreName: "vectorStore",
+	indexName: "embeddings",
+	model: new ModelRouterEmbeddingModel("google/text-embedding-004"),
+});
 
 export const symbologyAgent = new Agent({
 	id: "symbology-agent",
 	name: "Symbology & Frequency Analyzer",
 	model: "google/gemini-1.5-pro",
-	instructions: async () => {
-		const kb = await getKnowledgeBase();
-		return `You are an expert in Dakila researches. Analyze the image geometry (curves vs straight lines). Use ONLY the provided Knowledge Base as the source of truth.
+	instructions: `You are an expert in Dakila researches. You have access to a Knowledge Base via the vectorQueryTool.
+
+      Your goal is to answer the user's questions or analyze concepts using the theoretical information found in the Knowledge Base.
+
+      ALWAYS use the vectorQueryTool to search for relevant information before answering.
+      Use ONLY the provided Knowledge Base as the source of truth.
+      If the information is not in the Knowledge Base, admit it.
+
+      Analyze the image geometry (curves vs straight lines) or frequency concepts based on the retrieved context.
 
       You must output the response in the language requested by the user (ES, PT, or EN).
-
-      Knowledge Base:
-      ${kb}
-      `;
+      `,
+	tools: {
+		vectorQueryTool,
 	},
 });
