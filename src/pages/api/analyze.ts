@@ -1,8 +1,6 @@
 import type { APIRoute } from 'astro';
 import { mastra } from '../../mastra';
 import { PrismaClient } from '../../generated/prisma/client'; // Import from generated path
-import fs from 'fs';
-import path from 'path';
 
 // Initialize Prisma
 const prisma = new PrismaClient();
@@ -18,19 +16,12 @@ export const POST: APIRoute = async ({ request }) => {
       return new Response(JSON.stringify({ error: 'No image provided' }), { status: 400 });
     }
 
-    // 1. Save Image to Disk
+    // 1. Process Image
     const buffer = Buffer.from(await imageFile.arrayBuffer());
-    const filename = `${Date.now()}-${imageFile.name}`;
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-
-    // Ensure dir exists
-    if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    const filePath = path.join(uploadDir, filename);
-    fs.writeFileSync(filePath, buffer);
-    const publicUrl = `/uploads/${filename}`;
+    // On Vercel (serverless), we cannot save to the local filesystem persistently.
+    // For a real production app, upload to S3/Blob storage here.
+    // We will proceed with the buffer for analysis.
+    const publicUrl = `https://placeholder.com/image-uploaded`; // Placeholder since we can't save locally on Vercel
 
     // 2. Create Session in DB (Mocking DB interactions if Postgres isn't running)
     let sessionId = 'mock-session-id';
