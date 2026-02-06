@@ -55,7 +55,7 @@ export const POST: APIRoute = async ({ request }) => {
 		}
 
 		// 3. Call Mastra Agent
-		const agent = mastra.getAgent("symbology-agent");
+		const agent = mastra.getAgent("symbologyAgent");
 
 		// Construct Prompt
 		const prompt = `Analyze this image in the context of ${mode}.
