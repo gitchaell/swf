@@ -1,0 +1,44 @@
+{
+  "name": "astro-mastra-project",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "mastra:dev": "mastra dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/node": "^9.5.2",
+    "@astrojs/react": "^4.4.2",
+    "@mastra/core": "^1.2.0",
+    "@prisma/client": "^7.3.0",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
+    "@react-three/postprocessing": "^3.0.4",
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/pdf-parse": "^1.1.5",
+    "@types/react": "^19.2.13",
+    "@types/react-dom": "^19.2.3",
+    "@types/three": "^0.182.0",
+    "astro": "^5.17.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.563.0",
+    "pdf-parse": "^2.4.5",
+    "postprocessing": "^6.38.2",
+    "prisma": "^7.3.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-postprocessing": "^1.4.0",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss": "^4.1.18",
+    "three": "^0.182.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.1",
+    "mastra": "^1.2.0",
+    "typescript": "^5.9.3"
+  }
+}
