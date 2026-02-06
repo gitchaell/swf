@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import { NeonViewer } from "./NeonViewer";
 import { Analytics } from "@vercel/analytics/react";
-import { Upload, FileText, Download, Activity, Globe, Zap, Languages } from "lucide-react";
+import { Upload, FileText, Download, Activity, Globe, Zap, Languages, Send } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 
 type Language = "ES" | "PT" | "EN";
 type Mode = "SYMBOLOGY" | "FREQUENCY";
@@ -25,6 +26,7 @@ const translations = {
 		initiateAnalysis: "INITIATE ANALYSIS",
 		error: "Error",
 		errorAnalysis: "An error occurred during analysis.",
+		askFollowUp: "Ask a follow-up question...",
 	},
 	ES: {
 		title: "Simbologías y Frecuencias de Onda - Dakila",
@@ -43,6 +45,7 @@ const translations = {
 		initiateAnalysis: "INICIAR ANÁLISIS",
 		error: "Error",
 		errorAnalysis: "Ocurrió un error durante el análisis.",
+		askFollowUp: "Haz una pregunta de seguimiento...",
 	},
 	PT: {
 		title: "Simbologias e Frequências de Onda - Dakila",
@@ -61,6 +64,7 @@ const translations = {
 		initiateAnalysis: "INICIAR ANÁLISE",
 		error: "Erro",
 		errorAnalysis: "Ocorreu um erro durante a análise.",
+		askFollowUp: "Faça uma pergunta de acompanhamento...",
 	},
 };
 
@@ -69,9 +73,14 @@ export const AnalysisContainer = () => {
 	const [mode, setMode] = useState<Mode>("SYMBOLOGY");
 	const [image, setImage] = useState<File | null>(null);
 	const [imageUrl, setImageUrl] = useState<string | null>(null);
-	const [response, setResponse] = useState<string>("");
 	const [loading, setLoading] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	// Chat state
+	const [threadId, setThreadId] = useState<string | null>(null);
+	const [resourceId, setResourceId] = useState<string | null>(null);
+	const [chatHistory, setChatHistory] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
+	const [inputMessage, setInputMessage] = useState("");
 
 	const t = translations[language];
 
@@ -97,7 +106,9 @@ export const AnalysisContainer = () => {
 			const file = e.target.files[0];
 			setImage(file);
 			setImageUrl(URL.createObjectURL(file));
-			setResponse(""); // Clear previous response
+			setChatHistory([]);
+			setThreadId(null);
+			setResourceId(null);
 		}
 	};
 
@@ -117,20 +128,54 @@ export const AnalysisContainer = () => {
 			});
 			const data = await res.json();
 			if (data.error) {
-				setResponse(t.error + ": " + data.error);
+				setChatHistory((prev) => [...prev, { role: "assistant", content: t.error + ": " + data.error }]);
 			} else {
-				setResponse(data.text);
+				setThreadId(data.threadId);
+				setResourceId(data.resourceId);
+				setChatHistory([{ role: "assistant", content: data.text }]);
 			}
 		} catch (error) {
 			console.error(error);
-			setResponse(t.errorAnalysis);
+			setChatHistory((prev) => [...prev, { role: "assistant", content: t.errorAnalysis }]);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const handleSendMessage = async () => {
+		if (!inputMessage.trim() || loading) return;
+		const message = inputMessage;
+		setInputMessage("");
+		setLoading(true);
+
+		setChatHistory((prev) => [...prev, { role: "user", content: message }]);
+
+		const formData = new FormData();
+		formData.append("message", message);
+		formData.append("language", language);
+		formData.append("mode", mode);
+		if (threadId) formData.append("threadId", threadId);
+		if (resourceId) formData.append("resourceId", resourceId);
+
+		try {
+			const res = await fetch("/api/analyze", { method: "POST", body: formData });
+			const data = await res.json();
+			if (data.error) {
+				setChatHistory((prev) => [...prev, { role: "assistant", content: t.error + ": " + data.error }]);
+			} else {
+				setThreadId(data.threadId);
+				setResourceId(data.resourceId);
+				setChatHistory((prev) => [...prev, { role: "assistant", content: data.text }]);
+			}
+		} catch (error) {
+			console.error(error);
+			setChatHistory((prev) => [...prev, { role: "assistant", content: t.errorAnalysis }]);
 		} finally {
 			setLoading(false);
 		}
 	};
 
 	const downloadPDF = () => {
-		// Client-side simple print or alert
 		window.print();
 	};
 
@@ -221,14 +266,34 @@ export const AnalysisContainer = () => {
 						</button>
 					</div>
 
-					{/* Response Area */}
+					{/* Chat Area */}
 					<div className="flex-1 overflow-y-auto p-6 space-y-4">
-						{!response && !loading && (
+						{chatHistory.length === 0 && !loading && (
 							<div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-4 opacity-50">
 								<Zap className="w-12 h-12" />
 								<p className="font-mono text-sm">{t.awaitingInput}</p>
 							</div>
 						)}
+
+						{chatHistory.map((msg, index) => (
+							<div
+								key={index}
+								className={cn("flex flex-col max-w-[90%]", msg.role === "user" ? "ml-auto items-end" : "mr-auto items-start")}
+							>
+								<div
+									className={cn(
+										"rounded-lg p-4 text-sm",
+										msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground border border-border",
+									)}
+								>
+									{msg.role === "assistant" ? (
+										<div dangerouslySetInnerHTML={{ __html: msg.content.replace(/\n/g, "<br/>") }} />
+									) : (
+										msg.content
+									)}
+								</div>
+							</div>
+						))}
 
 						{loading && (
 							<div className="space-y-4 animate-pulse">
@@ -238,33 +303,42 @@ export const AnalysisContainer = () => {
 								<p className="text-primary font-mono text-xs pt-4">{t.accessingArchives}</p>
 							</div>
 						)}
-
-						{response && (
-							<div className="prose prose-invert prose-p:text-foreground prose-headings:text-primary max-w-none">
-								<div className="font-mono text-xs text-muted-foreground mb-4 border-b border-border pb-2">
-									{t.analysisComplete}
-								</div>
-								<div dangerouslySetInnerHTML={{ __html: response.replace(/\n/g, "<br/>") }} />
-							</div>
-						)}
 					</div>
 
 					{/* Action Footer */}
 					<div className="p-6 border-t border-border bg-background/50">
-						<div className="flex gap-4">
-							<Button
-								onClick={handleAnalyze}
-								disabled={!image || loading}
-								className="flex-1 py-6 font-bold tracking-wide shadow-[0_0_20px_rgba(8,145,178,0.2)] hover:shadow-[0_0_30px_rgba(8,145,178,0.4)]"
-							>
-								{loading ? <Activity className="w-4 h-4 animate-spin mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
-								{t.initiateAnalysis}
-							</Button>
+						{!threadId ? (
+							<div className="flex gap-4">
+								<Button
+									onClick={handleAnalyze}
+									disabled={!image || loading}
+									className="flex-1 py-6 font-bold tracking-wide shadow-[0_0_20px_rgba(8,145,178,0.2)] hover:shadow-[0_0_30px_rgba(8,145,178,0.4)]"
+								>
+									{loading ? <Activity className="w-4 h-4 animate-spin mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
+									{t.initiateAnalysis}
+								</Button>
 
-							<Button onClick={downloadPDF} disabled={!response} variant="outline" className="px-4 py-6">
-								<Download className="w-5 h-5" />
-							</Button>
-						</div>
+								<Button onClick={downloadPDF} disabled={chatHistory.length === 0} variant="outline" className="px-4 py-6">
+									<Download className="w-5 h-5" />
+								</Button>
+							</div>
+						) : (
+							<div className="flex gap-2 w-full">
+								<Input
+									value={inputMessage}
+									onChange={(e) => setInputMessage(e.target.value)}
+									placeholder={t.askFollowUp}
+									onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+									className="flex-1"
+								/>
+								<Button onClick={handleSendMessage} disabled={loading || !inputMessage.trim()}>
+									<Send className="w-4 h-4" />
+								</Button>
+								<Button onClick={downloadPDF} variant="outline" className="px-4">
+									<Download className="w-5 h-5" />
+								</Button>
+							</div>
+						)}
 					</div>
 				</div>
 			</main>

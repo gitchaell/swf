@@ -1,6 +1,7 @@
 import { Agent } from "@mastra/core/agent";
 import { ModelRouterEmbeddingModel } from "@mastra/core/llm";
 import { createVectorQueryTool } from "@mastra/rag";
+import { Memory } from "@mastra/memory";
 
 // Explicitly check for API Key to ensure it is configured
 if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
@@ -17,6 +18,7 @@ export const symbologyAgent = new Agent({
 	id: "symbology-agent",
 	name: "Symbology & Frequency Analyzer",
 	model: "google/gemini-1.5-pro",
+	memory: new Memory(),
 	instructions: `You are an expert researcher in Dakila technologies, Symbology, and Wave Frequencies.
       Your goal is to provide a detailed analysis by cross-referencing visual inputs with the official Knowledge Base.
 
