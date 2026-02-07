@@ -3,13 +3,17 @@ import {
 	Activity,
 	Download,
 	Globe,
+	Loader2,
 	Send,
 	Upload,
 	Zap
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
+<<<<<<< HEAD
 import remarkGfm from 'remark-gfm'
+=======
+>>>>>>> 85b5d641db1892809ddd7610e06a55c43eaccc34
 import { cn } from '../lib/utils'
 import { NeonViewer } from './NeonViewer'
 import { Button } from './ui/button'
@@ -437,11 +441,17 @@ export const AnalysisContainer = () => {
 											: 'bg-muted text-foreground border border-border'
 									)}>
 									{msg.role === 'assistant' ? (
+<<<<<<< HEAD
 										<div className="prose prose-sm dark:prose-invert max-w-none">
 											<ReactMarkdown remarkPlugins={[remarkGfm]}>
 												{msg.content}
 											</ReactMarkdown>
 										</div>
+=======
+										<ReactMarkdown className='prose prose-invert prose-sm max-w-none break-words'>
+											{msg.content}
+										</ReactMarkdown>
+>>>>>>> 85b5d641db1892809ddd7610e06a55c43eaccc34
 									) : (
 										msg.content
 									)}
@@ -470,7 +480,7 @@ export const AnalysisContainer = () => {
 									disabled={!image || loading}
 									className='flex-1 py-6 font-bold tracking-wide shadow-[0_0_20px_rgba(224,238,34,0.2)] hover:shadow-[0_0_30px_rgba(224,238,34,0.4)] text-primary-foreground bg-primary hover:bg-primary/90'>
 									{loading ? (
-										<Activity className='w-4 h-4 animate-spin mr-2' />
+										<Loader2 className='w-4 h-4 animate-spin mr-2' />
 									) : (
 										<Zap className='w-4 h-4 mr-2' />
 									)}
