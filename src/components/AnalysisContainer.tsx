@@ -8,6 +8,8 @@ import {
 	Zap
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { cn } from '../lib/utils'
 import { NeonViewer } from './NeonViewer'
 import { Button } from './ui/button'
@@ -158,6 +160,10 @@ export const AnalysisContainer = () => {
 				for (const line of lines) {
 					const trimmedLine = line.trim()
 					if (!trimmedLine || !trimmedLine.startsWith('data: ')) continue
+
+					if (trimmedLine === 'data: [DONE]') {
+						return
+					}
 
 					try {
 						const jsonStr = trimmedLine.substring(6) // Remove "data: " prefix
@@ -431,11 +437,11 @@ export const AnalysisContainer = () => {
 											: 'bg-muted text-foreground border border-border'
 									)}>
 									{msg.role === 'assistant' ? (
-										<div
-											dangerouslySetInnerHTML={{
-												__html: msg.content.replace(/\n/g, '<br/>')
-											}}
-										/>
+										<div className="prose prose-sm dark:prose-invert max-w-none">
+											<ReactMarkdown remarkPlugins={[remarkGfm]}>
+												{msg.content}
+											</ReactMarkdown>
+										</div>
 									) : (
 										msg.content
 									)}
