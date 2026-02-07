@@ -1,4 +1,5 @@
 import { google } from "@ai-sdk/google";
+import { MDocument } from "@mastra/rag";
 import { embedMany, generateText } from "ai";
 import "dotenv/config";
 import fs from "fs";
@@ -6,27 +7,7 @@ import path from "path";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const OUTPUT_FILE = path.join(process.cwd(), "src/mastra/rag/knowledge.json");
-
-// Split text into chunks
-function chunkText(text, maxLength = 1000) {
-	const chunks = [];
-	let currentChunk = "";
-
-	// Split by paragraphs first to keep context together
-	const paragraphs = text.split(/\n\s*\n/);
-
-	for (const paragraph of paragraphs) {
-		if ((currentChunk + paragraph).length > maxLength) {
-			if (currentChunk.trim()) chunks.push(currentChunk.trim());
-			currentChunk = "";
-		}
-		currentChunk += paragraph + "\n\n";
-	}
-	if (currentChunk.trim()) {
-		chunks.push(currentChunk.trim());
-	}
-	return chunks;
-}
+const CACHE_FILE = path.join(DATA_DIR, "image_descriptions_cache.json");
 
 // Extract image paths from Markdown content
 function extractImagesFromMarkdown(mdContent, basePath) {
@@ -46,6 +27,17 @@ function extractImagesFromMarkdown(mdContent, basePath) {
 		}
 	}
 	return images;
+}
+
+// Load cache
+let imageCache = {};
+if (fs.existsSync(CACHE_FILE)) {
+	try {
+		imageCache = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
+		console.log(`Loaded ${Object.keys(imageCache).length} image descriptions from cache.`);
+	} catch (e) {
+		console.warn("Failed to load image cache:", e);
+	}
 }
 
 async function populate() {
@@ -74,11 +66,17 @@ async function populate() {
 
 		console.log(`Processing ${file}...`);
 
-		// 1. Process Text
-		const textChunks = chunkText(content);
+		// 1. Process Text using Mastra MDocument
+		const doc = MDocument.fromMarkdown(content);
+		const textChunks = await doc.chunk({
+			strategy: "markdown",
+			maxSize: 1000,
+			overlap: 100,
+		});
+
 		textChunks.forEach((chunk) => {
 			allChunks.push({
-				text: chunk,
+				text: chunk.text,
 				source: file,
 				type: "text"
 			});
@@ -90,34 +88,47 @@ async function populate() {
 		console.log(`  - Found ${images.length} images. Generating descriptions...`);
 
 		for (const imgPath of images) {
-			try {
-				const imageBuffer = fs.readFileSync(imgPath);
-				const result = await generateText({
-					model: google("gemini-2.0-flash"),
-					messages: [
-						{
-							role: "user",
-							content: [
-								{ type: "text", text: "Describe this image in detail. Focus on any geometric shapes, patterns, symbols, and colors you see. Explain potential meanings related to symbology or frequency if apparent." },
-								{ type: "image", image: imageBuffer }
-							]
-						}
-					]
-				});
+			const imgName = path.basename(imgPath);
+			let description = "";
 
-				const description = `[IMAGE DESCRIPTION] Source: ${path.basename(imgPath)}\n${result.text}`;
-				// console.log(`    - Generated description for ${path.basename(imgPath)}`);
+			if (imageCache[imgName]) {
+				console.log(`    - Using cached description for ${imgName}`);
+				description = imageCache[imgName];
+			} else {
+				try {
+					console.log(`    - Generating description for ${imgName}...`);
+					const imageBuffer = fs.readFileSync(imgPath);
+					const result = await generateText({
+						model: google("gemini-2.0-flash"),
+						messages: [
+							{
+								role: "user",
+								content: [
+									{ type: "text", text: "Describe this image in detail. Focus on any geometric shapes, patterns, symbols, and colors you see. Explain potential meanings related to symbology or frequency if apparent." },
+									{ type: "image", image: imageBuffer }
+								]
+							}
+						]
+					});
 
-				allChunks.push({
-					text: description,
-					source: file,
-					originalImage: path.basename(imgPath),
-					type: "image_description"
-				});
+					description = `[IMAGE DESCRIPTION] Source: ${imgName}\n${result.text}`;
+					imageCache[imgName] = description; // Update cache
 
-			} catch (err) {
-				console.error(`    - Error processing image ${path.basename(imgPath)}:`, err.message);
+					// Save cache incrementally to avoid data loss
+					fs.writeFileSync(CACHE_FILE, JSON.stringify(imageCache, null, 2));
+
+				} catch (err) {
+					console.error(`    - Error processing image ${imgName}:`, err.message);
+					continue;
+				}
 			}
+
+			allChunks.push({
+				text: description,
+				source: file,
+				originalImage: imgName,
+				type: "image_description"
+			});
 		}
 	}
 
