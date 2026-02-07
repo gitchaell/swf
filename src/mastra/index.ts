@@ -23,7 +23,7 @@ try {
 		// Create index explicitly
 		await vectorStore.createIndex({
 			indexName: "embeddings",
-			dimension: 768,
+			dimension: 3072,
 		});
 
 		// Insert data
