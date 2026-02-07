@@ -8,8 +8,7 @@
 		"build": "astro build",
 		"preview": "astro preview",
 		"astro": "astro",
-		"rag:md2pdf": "node scripts/md-to-pdf.js",
-		"rag:pdf2rag": "node scripts/pdf-to-rag.js"
+		"rag:populate": "node scripts/populate-rag.js"
 	},
 	"dependencies": {
 		"@ai-sdk/google": "^3.0.21",

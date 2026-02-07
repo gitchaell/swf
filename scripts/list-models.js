@@ -13,17 +13,19 @@ fetch(url)
 		if (d.error) {
 			console.error("Error from API:", d.error);
 		} else {
-			console.log("Available Embedding Models:");
+			console.log("Available Content Generation Models:");
 			if (d.models) {
-				const embeddingModels = d.models.filter(m => m.name.toLowerCase().includes("embedding"));
-				if (embeddingModels.length === 0) {
-					console.log("No embedding models found.");
+				const genModels = d.models.filter(m =>
+					m.supportedGenerationMethods &&
+					m.supportedGenerationMethods.includes("generateContent") &&
+					m.name.toLowerCase().includes("gemini")
+				);
+
+				if (genModels.length === 0) {
+					console.log("No Gemini models with generateContent found.");
 				} else {
-					embeddingModels.forEach(m => {
+					genModels.forEach(m => {
 						console.log(`- ${m.name}`);
-						if (m.supportedGenerationMethods) {
-							console.log(`  Methods: ${m.supportedGenerationMethods.join(", ")}`);
-						}
 					});
 				}
 			} else {

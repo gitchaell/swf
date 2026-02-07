@@ -260,7 +260,7 @@ export const AnalysisContainer = () => {
 					<NeonViewer imageUrl={imageUrl} />
 
 					{/* Controls overlay */}
-					<div className='absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-4'>
+					<div className='absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 w-full'>
 						<Button
 							onClick={() => fileInputRef.current?.click()}
 							variant='secondary'
@@ -278,6 +278,47 @@ export const AnalysisContainer = () => {
 							onChange={handleUpload}
 							accept='image/*'
 						/>
+
+						{/* Examples */}
+						<div className="flex gap-2">
+							<button
+								onClick={() => {
+									setImageUrl('/examples/symbology.png');
+									// Fetch the file to set as 'image' state for upload
+									fetch('/examples/symbology.png')
+										.then(res => res.blob())
+										.then(blob => {
+											const file = new File([blob], "symbology.png", { type: "image/png" });
+											setImage(file);
+											setMode('SYMBOLOGY');
+										});
+									setChatHistory([]);
+									setThreadId(null);
+									setResourceId(null);
+								}}
+								className="text-[10px] text-muted-foreground hover:text-primary transition-colors border border-border/50 hover:border-primary/50 rounded-full px-3 py-1 bg-black/40 backdrop-blur-sm"
+							>
+								Try Symbology
+							</button>
+							<button
+								onClick={() => {
+									setImageUrl('/examples/frequency.png');
+									fetch('/examples/frequency.png')
+										.then(res => res.blob())
+										.then(blob => {
+											const file = new File([blob], "frequency.png", { type: "image/png" });
+											setImage(file);
+											setMode('FREQUENCY');
+										});
+									setChatHistory([]);
+									setThreadId(null);
+									setResourceId(null);
+								}}
+								className="text-[10px] text-muted-foreground hover:text-primary transition-colors border border-border/50 hover:border-primary/50  rounded-full px-3 py-1 bg-black/40 backdrop-blur-sm"
+							>
+								Try Frequency
+							</button>
+						</div>
 					</div>
 				</div>
 
