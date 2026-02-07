@@ -1,17 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { NeonViewer } from './NeonViewer'
 import { Analytics } from '@vercel/analytics/react'
 import {
-	Upload,
-	FileText,
-	Download,
 	Activity,
+	Download,
 	Globe,
-	Zap,
-	Languages,
-	Send
+	Send,
+	Upload,
+	Zap
 } from 'lucide-react'
+import React, { useEffect, useRef, useState } from 'react'
 import { cn } from '../lib/utils'
+import { NeonViewer } from './NeonViewer'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 
@@ -216,12 +214,12 @@ export const AnalysisContainer = () => {
 		<div className='min-h-screen bg-background text-foreground font-sans selection:bg-primary/30'>
 			<Analytics />
 			{/* Header */}
-			<header className='fixed top-0 w-full z-10 bg-background/80 backdrop-blur-md border-b border-border p-4'>
+			<header className='fixed top-0 w-full z-10 glass p-4'>
 				<div className='max-w-7xl mx-auto flex justify-between items-center'>
 					<div className='flex items-center gap-2'>
-						<img src='/logo.svg' alt='Dakila Logo' className='w-8 h-8' />
+						<img src='/logo.svg' alt='App Logo' className='w-8 h-8' />
 						<div className='flex flex-col'>
-							<h1 className='text-lg font-bold tracking-tight bg-linear-to-r from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent leading-tight'>
+							<h1 className='text-lg font-bold tracking-tight bg-linear-to-r from-primary to-white bg-clip-text text-transparent leading-tight'>
 								{t.headerTitle}
 							</h1>
 							<p className='text-[10px] text-muted-foreground font-mono tracking-wide'>
@@ -253,7 +251,7 @@ export const AnalysisContainer = () => {
 							{t.visualizer}
 						</div>
 						{mode === 'FREQUENCY' && (
-							<div className='px-2 py-1 bg-fuchsia-900/20 backdrop-blur rounded text-xs font-mono text-fuchsia-400 border border-fuchsia-900 animate-pulse'>
+							<div className='px-2 py-1 bg-primary/10 backdrop-blur rounded text-xs font-mono text-primary border border-primary/50 animate-pulse'>
 								{t.waveAnalysis}
 							</div>
 						)}
@@ -302,7 +300,7 @@ export const AnalysisContainer = () => {
 							className={cn(
 								'flex-1 py-4 text-sm tracking-widest font-mono transition-colors hover:bg-secondary/20',
 								mode === 'FREQUENCY'
-									? 'text-fuchsia-400 border-b-2 border-fuchsia-400'
+									? 'text-primary border-b-2 border-primary'
 									: 'text-muted-foreground'
 							)}>
 							{t.frequency}
@@ -366,7 +364,7 @@ export const AnalysisContainer = () => {
 								<Button
 									onClick={handleAnalyze}
 									disabled={!image || loading}
-									className='flex-1 py-6 font-bold tracking-wide shadow-[0_0_20px_rgba(8,145,178,0.2)] hover:shadow-[0_0_30px_rgba(8,145,178,0.4)]'>
+									className='flex-1 py-6 font-bold tracking-wide shadow-[0_0_20px_rgba(224,238,34,0.2)] hover:shadow-[0_0_30px_rgba(224,238,34,0.4)] text-primary-foreground bg-primary hover:bg-primary/90'>
 									{loading ? (
 										<Activity className='w-4 h-4 animate-spin mr-2' />
 									) : (

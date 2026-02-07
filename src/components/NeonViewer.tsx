@@ -1,11 +1,11 @@
-import React, { useRef } from "react";
-import { Canvas, useFrame, extend } from "@react-three/fiber";
-import { shaderMaterial, OrbitControls, useTexture } from "@react-three/drei";
-import { EffectComposer, Bloom } from "@react-three/postprocessing";
+import { OrbitControls, shaderMaterial, useTexture } from "@react-three/drei";
+import { Canvas, extend, useFrame } from "@react-three/fiber";
+import { Bloom, EffectComposer } from "@react-three/postprocessing";
+import { useRef } from "react";
 import * as THREE from "three";
 
 const NeonMaterial = shaderMaterial(
-	{ uTexture: new THREE.Texture(), uTime: 0, uColor: new THREE.Color(0.0, 1.0, 1.0) },
+	{ uTexture: new THREE.Texture(), uTime: 0, uColor: new THREE.Color(0.878, 0.933, 0.133) }, // #E0EE22
 	// Vertex Shader
 	`
     varying vec2 vUv;
@@ -27,10 +27,10 @@ const NeonMaterial = shaderMaterial(
       // Key out black background (assuming light strokes on dark bg)
       float alpha = smoothstep(0.05, 0.2, brightness);
 
-      // Neon color (Cyan/Magenta gradient)
-      vec3 cyan = vec3(0.0, 1.0, 1.0);
-      vec3 magenta = vec3(1.0, 0.0, 1.0);
-      vec3 finalColor = mix(cyan, magenta, vUv.y);
+      // Neon color (Lime gradient)
+      vec3 lime = uColor;
+      vec3 white = vec3(1.0, 1.0, 1.0);
+      vec3 finalColor = mix(lime, white, brightness * 0.5);
 
       gl_FragColor = vec4(finalColor, alpha);
     }
@@ -61,24 +61,25 @@ const GlowingPlane = ({ imageUrl }: { imageUrl: string }) => {
 export const NeonViewer = ({ imageUrl }: { imageUrl: string | null }) => {
 	if (!imageUrl)
 		return (
-			<div className="w-full h-full flex items-center justify-center bg-slate-950 text-cyan-400 border border-cyan-900/30 rounded-lg">
+			<div className="w-full h-full flex items-center justify-center bg-background/50 text-primary border border-primary/20 rounded-lg backdrop-blur-sm">
 				<div className="text-center">
-					<p className="text-lg font-bold">Waiting for Signal...</p>
-					<p className="text-xs opacity-50">Upload an image to visualize</p>
+					<p className="text-lg font-bold tracking-widest font-mono">WAITING FOR SIGNAL...</p>
+					<p className="text-xs opacity-50 font-mono mt-2">UPLOAD SOURCE TO VISUALIZE</p>
 				</div>
 			</div>
 		);
 
 	return (
-		<div className="w-full h-full bg-slate-950 rounded-lg overflow-hidden border border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
+		<div className="w-full h-full bg-black/80 rounded-lg overflow-hidden border border-primary/20 shadow-[0_0_30px_rgba(224,238,34,0.1)] relative group">
+			<div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(224,238,34,0.05),transparent_70%)] pointer-events-none" />
 			<Canvas camera={{ position: [0, 0, 6] }}>
-				<color attach="background" args={["#020617"]} />
-				<ambientLight />
+				<color attach="background" args={["#000000"]} />
+				<ambientLight intensity={0.5} />
 				<GlowingPlane imageUrl={imageUrl} />
 				<EffectComposer>
-					<Bloom luminanceThreshold={0.1} luminanceSmoothing={0.9} intensity={2.0} />
+					<Bloom luminanceThreshold={0.1} luminanceSmoothing={0.9} intensity={1.5} />
 				</EffectComposer>
-				<OrbitControls />
+				<OrbitControls minPolarAngle={Math.PI / 4} maxPolarAngle={Math.PI * 0.75} />
 			</Canvas>
 		</div>
 	);
