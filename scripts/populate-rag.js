@@ -129,28 +129,42 @@ async function populate() {
 	console.log(`Generated ${allChunks.length} total chunks (text + images). Generating embeddings...`);
 
 	// Use google.textEmbeddingModel for embeddings
-	try {
-		const { embeddings } = await embedMany({
-			model: google.textEmbeddingModel("gemini-embedding-001"),
-			values: allChunks.map(c => c.text),
-		});
+	// Batch processing to avoid "at most 100 requests" error
+	const BATCH_SIZE = 50;
+	const knowledgeData = [];
 
-		const knowledgeData = allChunks.map((chunk, i) => ({
-			id: crypto.randomUUID(),
-			text: chunk.text,
-			vector: embeddings[i],
-			metadata: {
-				source: chunk.source,
-				type: chunk.type,
-				originalImage: chunk.originalImage
-			}
-		}));
+	console.log(`Generating embeddings in batches of ${BATCH_SIZE}...`);
 
+	for (let i = 0; i < allChunks.length; i += BATCH_SIZE) {
+		const batch = allChunks.slice(i, i + BATCH_SIZE);
+		console.log(`  - Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(allChunks.length / BATCH_SIZE)}`);
+
+		try {
+			const { embeddings } = await embedMany({
+				model: google.textEmbeddingModel("gemini-embedding-001"),
+				values: batch.map((c) => c.text),
+			});
+
+			batch.forEach((chunk, idx) => {
+				knowledgeData.push({
+					id: crypto.randomUUID(),
+					text: chunk.text,
+					vector: embeddings[idx],
+					metadata: {
+						source: chunk.source,
+						type: chunk.type,
+						originalImage: chunk.originalImage,
+					},
+				});
+			});
+		} catch (err) {
+			console.error(`  - Error generating embeddings for batch starting at index ${i}:`, err);
+		}
+	}
+
+	if (knowledgeData.length > 0) {
 		fs.writeFileSync(OUTPUT_FILE, JSON.stringify(knowledgeData, null, 2));
 		console.log(`Successfully saved ${knowledgeData.length} records to ${OUTPUT_FILE}`);
-
-	} catch (err) {
-		console.error("Error generating embeddings:", err);
 	}
 }
 

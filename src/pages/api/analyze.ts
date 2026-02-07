@@ -1,7 +1,6 @@
-import type { APIRoute } from "astro";
-import { mastra } from "../../mastra";
 import { put } from "@vercel/blob";
 import { createClient } from "@vercel/edge-config";
+import type { APIRoute } from "astro";
 
 // Initialize Edge Config (Connection setup as requested)
 const edgeConfig = createClient(process.env.EDGE_CONFIG);
@@ -53,8 +52,8 @@ export const POST: APIRoute = async ({ request }) => {
 			console.warn("Edge Config read failed", configError);
 		}
 
-		// 3. Call Mastra Agent
-		const agent = mastra.getAgent("symbologyAgent");
+		// 3. Call Mastra Agent via API (Decoupled)
+		const mastraUrl = process.env.MASTRA_API_URL || "http://localhost:4111";
 
 		// Construct Prompt
 		let prompt = "";
@@ -77,42 +76,49 @@ export const POST: APIRoute = async ({ request }) => {
 		}
 
 		const content: any[] = [{ type: "text", text: prompt }];
-		if (buffer) {
-			content.push({ type: "image", image: buffer });
+		if (publicUrl) {
+			// Use the Vercel Blob URL so the external server can access it
+			content.push({ type: "image", image: publicUrl });
 		}
 
-		let result;
 		try {
-			result = await agent.generate(
-				[
-					{
-						role: "user",
-						content: content,
-					},
-				],
-				{
-					memory: {
-						resource: resourceId,
-						thread: threadId,
-					},
+			const agentResponse = await fetch(`${mastraUrl}/api/agents/symbologyAgent/stream`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
 				},
-			);
+				body: JSON.stringify({
+					messages: [
+						{
+							role: "user",
+							content: content,
+						},
+					],
+					threadId: threadId,
+					resourceId: resourceId,
+				}),
+			});
+
+			if (!agentResponse.ok) {
+				const errorText = await agentResponse.text();
+				console.error("Mastra API Error:", agentResponse.status, errorText);
+				return new Response(JSON.stringify({ error: `Mastra API Error: ${errorText}` }), { status: 502 });
+			}
+
+			// Return the stream directly to the client
+			return new Response(agentResponse.body, {
+				headers: {
+					"Content-Type": "text/plain",
+					"X-Thread-Id": threadId,
+					"X-Resource-Id": resourceId,
+					"X-Image-Url": publicUrl
+				},
+			});
+
 		} catch (agentError) {
-			console.error("Agent generation failed", agentError);
+			console.error("Agent API request failed", agentError);
 			return new Response(JSON.stringify({ error: "Agent analysis failed" }), { status: 500 });
 		}
-
-		return new Response(
-			JSON.stringify({
-				text: result.text,
-				imageUrl: publicUrl,
-				threadId,
-				resourceId,
-			}),
-			{
-				headers: { "Content-Type": "application/json" },
-			},
-		);
 	} catch (error) {
 		console.error(error);
 		return new Response(JSON.stringify({ error: "Internal Server Error" }), { status: 500 });

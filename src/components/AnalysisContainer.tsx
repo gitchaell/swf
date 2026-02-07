@@ -125,6 +125,41 @@ export const AnalysisContainer = () => {
 		}
 	}
 
+	const readStream = async (res: Response) => {
+		// Read headers
+		const newThreadId = res.headers.get('X-Thread-Id')
+		const newResourceId = res.headers.get('X-Resource-Id')
+		if (newThreadId) setThreadId(newThreadId)
+		if (newResourceId) setResourceId(newResourceId)
+
+		if (!res.body) return
+
+		const reader = res.body.getReader()
+		const decoder = new TextDecoder()
+		let done = false
+		let accumulatedText = ''
+
+		// Add initial empty message for assistant
+		setChatHistory(prev => [...prev, { role: 'assistant', content: '' }])
+
+		while (!done) {
+			const { value, done: doneReading } = await reader.read()
+			done = doneReading
+			const chunkValue = decoder.decode(value, { stream: !done })
+			if (chunkValue) {
+				accumulatedText += chunkValue
+				setChatHistory(prev => {
+					const newHistory = [...prev]
+					const lastMsg = newHistory[newHistory.length - 1]
+					if (lastMsg.role === 'assistant') {
+						lastMsg.content = accumulatedText
+					}
+					return newHistory
+				})
+			}
+		}
+	}
+
 	const handleAnalyze = async () => {
 		if (!image) return
 		setLoading(true)
@@ -139,16 +174,16 @@ export const AnalysisContainer = () => {
 				method: 'POST',
 				body: formData
 			})
-			const data = await res.json()
-			if (data.error) {
+
+			if (!res.ok) {
+				const data = await res.json() // Or text if json fails
 				setChatHistory(prev => [
 					...prev,
-					{ role: 'assistant', content: t.error + ': ' + data.error }
+					{ role: 'assistant', content: t.error + ': ' + (data.error || res.statusText) }
 				])
 			} else {
-				setThreadId(data.threadId)
-				setResourceId(data.resourceId)
-				setChatHistory([{ role: 'assistant', content: data.text }])
+				setChatHistory([]) // Clear previous history on new analysis
+				await readStream(res)
 			}
 		} catch (error) {
 			console.error(error)
@@ -181,19 +216,15 @@ export const AnalysisContainer = () => {
 				method: 'POST',
 				body: formData
 			})
-			const data = await res.json()
-			if (data.error) {
+
+			if (!res.ok) {
+				const data = await res.json()
 				setChatHistory(prev => [
 					...prev,
-					{ role: 'assistant', content: t.error + ': ' + data.error }
+					{ role: 'assistant', content: t.error + ': ' + (data.error || res.statusText) }
 				])
 			} else {
-				setThreadId(data.threadId)
-				setResourceId(data.resourceId)
-				setChatHistory(prev => [
-					...prev,
-					{ role: 'assistant', content: data.text }
-				])
+				await readStream(res)
 			}
 		} catch (error) {
 			console.error(error)
