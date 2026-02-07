@@ -7,7 +7,9 @@
 		"mastra:dev": "mastra dev",
 		"build": "astro build",
 		"preview": "astro preview",
-		"astro": "astro"
+		"astro": "astro",
+		"rag:md2pdf": "node scripts/md-to-pdf.js",
+		"rag:pdf2rag": "node scripts/pdf-to-rag.js"
 	},
 	"dependencies": {
 		"@ai-sdk/google": "^3.0.21",
@@ -41,6 +43,7 @@
 		"clsx": "^2.1.1",
 		"geist": "^1.5.1",
 		"lucide-react": "^0.563.0",
+		"markdown-pdf": "^11.0.0",
 		"pdf-parse": "^2.4.5",
 		"postprocessing": "^6.38.2",
 		"react": "^19.2.4",

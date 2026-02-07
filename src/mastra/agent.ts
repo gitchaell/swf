@@ -1,7 +1,7 @@
 import { Agent } from "@mastra/core/agent";
 import { ModelRouterEmbeddingModel } from "@mastra/core/llm";
-import { createVectorQueryTool } from "@mastra/rag";
 import { Memory } from "@mastra/memory";
+import { createVectorQueryTool } from "@mastra/rag";
 
 // Explicitly check for API Key to ensure it is configured
 if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
@@ -11,7 +11,7 @@ if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
 const vectorQueryTool = createVectorQueryTool({
 	vectorStoreName: "vectorStore",
 	indexName: "embeddings",
-	model: new ModelRouterEmbeddingModel("google/text-embedding-004"),
+	model: new ModelRouterEmbeddingModel("google/gemini-embedding-001"),
 });
 
 export const symbologyAgent = new Agent({
