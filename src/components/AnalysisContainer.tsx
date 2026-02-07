@@ -1,6 +1,5 @@
 import { Analytics } from '@vercel/analytics/react'
 import {
-	Activity,
 	Download,
 	Globe,
 	Loader2,
@@ -10,10 +9,6 @@ import {
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
-<<<<<<< HEAD
-import remarkGfm from 'remark-gfm'
-=======
->>>>>>> 85b5d641db1892809ddd7610e06a55c43eaccc34
 import { cn } from '../lib/utils'
 import { NeonViewer } from './NeonViewer'
 import { Button } from './ui/button'
@@ -435,23 +430,15 @@ export const AnalysisContainer = () => {
 								)}>
 								<div
 									className={cn(
-										'rounded-lg p-4 text-sm',
+										'rounded-lg p-4 text-sm prose prose-invert prose-sm max-w-none wrap-break-words',
 										msg.role === 'user'
 											? 'bg-primary text-primary-foreground'
 											: 'bg-muted text-foreground border border-border'
 									)}>
 									{msg.role === 'assistant' ? (
-<<<<<<< HEAD
-										<div className="prose prose-sm dark:prose-invert max-w-none">
-											<ReactMarkdown remarkPlugins={[remarkGfm]}>
-												{msg.content}
-											</ReactMarkdown>
-										</div>
-=======
-										<ReactMarkdown className='prose prose-invert prose-sm max-w-none break-words'>
+										<ReactMarkdown>
 											{msg.content}
 										</ReactMarkdown>
->>>>>>> 85b5d641db1892809ddd7610e06a55c43eaccc34
 									) : (
 										msg.content
 									)}
