@@ -138,6 +138,7 @@ export const AnalysisContainer = () => {
 		const decoder = new TextDecoder()
 		let done = false
 		let accumulatedText = ''
+		let buffer = '' // Buffer for handling split chunks
 
 		// Add initial empty message for assistant
 		setChatHistory(prev => [...prev, { role: 'assistant', content: '' }])
@@ -146,16 +147,41 @@ export const AnalysisContainer = () => {
 			const { value, done: doneReading } = await reader.read()
 			done = doneReading
 			const chunkValue = decoder.decode(value, { stream: !done })
+
 			if (chunkValue) {
-				accumulatedText += chunkValue
-				setChatHistory(prev => {
-					const newHistory = [...prev]
-					const lastMsg = newHistory[newHistory.length - 1]
-					if (lastMsg.role === 'assistant') {
-						lastMsg.content = accumulatedText
+				buffer += chunkValue
+				const lines = buffer.split('\n')
+
+				// Keep the last incomplete line in the buffer
+				buffer = lines.pop() || ''
+
+				for (const line of lines) {
+					const trimmedLine = line.trim()
+					if (!trimmedLine || !trimmedLine.startsWith('data: ')) continue
+
+					try {
+						const jsonStr = trimmedLine.substring(6) // Remove "data: " prefix
+						const data = JSON.parse(jsonStr)
+
+						// Handle specific event types from Mastra
+						if (data.type === 'text-delta') {
+							const newText = data.payload?.text || ''
+							if (newText) {
+								accumulatedText += newText
+								setChatHistory(prev => {
+									const newHistory = [...prev]
+									const lastMsg = newHistory[newHistory.length - 1]
+									if (lastMsg.role === 'assistant') {
+										lastMsg.content = accumulatedText
+									}
+									return newHistory
+								})
+							}
+						}
+					} catch (e) {
+						console.warn('Error parsing SSE data:', e, trimmedLine)
 					}
-					return newHistory
-				})
+				}
 			}
 		}
 	}

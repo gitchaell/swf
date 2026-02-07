@@ -1,7 +1,7 @@
 // @ts-check
-import { defineConfig } from 'astro/config'
 import vercel from '@astrojs/vercel'
 import AstroPWA from '@vite-pwa/astro'
+import { defineConfig } from 'astro/config'
 
 import react from '@astrojs/react'
 import tailwindcss from '@tailwindcss/vite'
@@ -16,7 +16,7 @@ export default defineConfig({
 		react(),
 		AstroPWA({
 			registerType: 'autoUpdate',
-			includeAssets: ['favicon.ico', 'logo.svg', 'apple-touch-icon.png'],
+			includeAssets: ['favicon.ico', 'logo.svg'],
 			manifest: {
 				name: 'Simbologías y Frecuencias de Onda - Dakila',
 				short_name: 'Simbologías Dakila',

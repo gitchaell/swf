@@ -1,12 +1,21 @@
 import { put } from "@vercel/blob";
 import { createClient } from "@vercel/edge-config";
 import type { APIRoute } from "astro";
-
-// Initialize Edge Config (Connection setup as requested)
-const edgeConfig = createClient(process.env.EDGE_CONFIG);
+import crypto from "node:crypto";
 
 export const POST: APIRoute = async ({ request }) => {
 	try {
+		// Initialize Edge Config safely inside the handler
+		let edgeConfig;
+		try {
+			const edgeConfigConnection = import.meta.env.EDGE_CONFIG || process.env.EDGE_CONFIG;
+			if (edgeConfigConnection) {
+				edgeConfig = createClient(edgeConfigConnection);
+			}
+		} catch (e) {
+			console.warn("Failed to initialize Edge Config client:", e);
+		}
+
 		const formData = await request.formData();
 		const imageFile = formData.get("image") as File | null;
 		const language = (formData.get("language") as string) || "EN";
@@ -20,7 +29,10 @@ export const POST: APIRoute = async ({ request }) => {
 		if (!threadId) threadId = crypto.randomUUID();
 
 		if (!imageFile && !message) {
-			return new Response(JSON.stringify({ error: "No image or message provided" }), { status: 400 });
+			return new Response(JSON.stringify({ error: "No image or message provided" }), {
+				status: 400,
+				headers: { "Content-Type": "application/json" }
+			});
 		}
 
 		// 1. Process Image - Upload to Vercel Blob
@@ -31,29 +43,41 @@ export const POST: APIRoute = async ({ request }) => {
 			try {
 				buffer = Buffer.from(await imageFile.arrayBuffer());
 
-				const blob = await put(imageFile.name, imageFile, {
-					access: "public",
-					token: process.env.BLOB_READ_WRITE_TOKEN,
-				});
-				publicUrl = blob.url;
+				const blobToken = import.meta.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
+
+				if (blobToken) {
+					const blob = await put(imageFile.name, imageFile, {
+						access: "public",
+						token: blobToken,
+						addRandomSuffix: true,
+					});
+					publicUrl = blob.url;
+				} else {
+					console.warn("BLOB_READ_WRITE_TOKEN is missing, skipping upload.");
+				}
 			} catch (uploadError) {
 				console.error("Blob upload failed:", uploadError);
-				buffer = Buffer.from(await imageFile.arrayBuffer());
 			}
 		}
 
 		// 2. Edge Config Interaction
-		try {
-			const isActive = await edgeConfig.get("service_active");
-			if (isActive === false) {
-				return new Response(JSON.stringify({ error: "Service is currently under maintenance." }), { status: 503 });
+		if (edgeConfig) {
+			try {
+				const isActive = await edgeConfig.get("service_active");
+				if (isActive === false) {
+					return new Response(JSON.stringify({ error: "Service is currently under maintenance." }), {
+						status: 503,
+						headers: { "Content-Type": "application/json" }
+					});
+				}
+			} catch (configError) {
+				console.warn("Edge Config read failed", configError);
 			}
-		} catch (configError) {
-			console.warn("Edge Config read failed", configError);
 		}
 
 		// 3. Call Mastra Agent via API (Decoupled)
-		const mastraUrl = process.env.MASTRA_API_URL || "http://localhost:4111";
+		// Try import.meta.env first, then process.env as fallback
+		const mastraUrl = import.meta.env.MASTRA_API_URL || process.env.MASTRA_API_URL || "http://localhost:4111";
 
 		// Construct Prompt
 		let prompt = "";
@@ -102,7 +126,10 @@ export const POST: APIRoute = async ({ request }) => {
 			if (!agentResponse.ok) {
 				const errorText = await agentResponse.text();
 				console.error("Mastra API Error:", agentResponse.status, errorText);
-				return new Response(JSON.stringify({ error: `Mastra API Error: ${errorText}` }), { status: 502 });
+				return new Response(JSON.stringify({ error: `Mastra API Error: ${errorText}` }), {
+					status: 502,
+					headers: { "Content-Type": "application/json" }
+				});
 			}
 
 			// Return the stream directly to the client
@@ -117,10 +144,16 @@ export const POST: APIRoute = async ({ request }) => {
 
 		} catch (agentError) {
 			console.error("Agent API request failed", agentError);
-			return new Response(JSON.stringify({ error: "Agent analysis failed" }), { status: 500 });
+			return new Response(JSON.stringify({ error: "Agent analysis failed" }), {
+				status: 500,
+				headers: { "Content-Type": "application/json" }
+			});
 		}
 	} catch (error) {
-		console.error(error);
-		return new Response(JSON.stringify({ error: "Internal Server Error" }), { status: 500 });
+		console.error("Critical API Error:", error);
+		return new Response(JSON.stringify({ error: "Internal Server Error" }), {
+			status: 500,
+			headers: { "Content-Type": "application/json" }
+		});
 	}
 };
