@@ -1,6 +1,6 @@
 import { google } from "@ai-sdk/google";
-import { embedMany, generateText } from "ai";
 import { MDocument } from "@mastra/rag";
+import { embedMany, generateText } from "ai";
 import "dotenv/config";
 import fs from "fs";
 import path from "path";
@@ -152,7 +152,7 @@ async function populate() {
 
 		try {
 			const { embeddings } = await embedMany({
-				model: google.textEmbeddingModel("text-embedding-004"),
+				model: google.textEmbeddingModel("gemini-embedding-001"),
 				values: batch.map((c) => c.text),
 			});
 

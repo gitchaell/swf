@@ -6,21 +6,21 @@ import "dotenv/config";
 
 // Explicitly check for API Key to ensure it is configured
 if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-	throw new Error("GOOGLE_GENERATIVE_AI_API_KEY is not set in environment variables.");
+   throw new Error("GOOGLE_GENERATIVE_AI_API_KEY is not set in environment variables.");
 }
 
 const vectorQueryTool = createVectorQueryTool({
-	vectorStoreName: "vectorStore",
-	indexName: "embeddings",
-	model: new ModelRouterEmbeddingModel("google/text-embedding-004"),
+   vectorStoreName: "vectorStore",
+   indexName: "embeddings",
+   model: new ModelRouterEmbeddingModel("google/gemini-embedding-001"),
 });
 
 export const symbologyAgent = new Agent({
-	id: "symbology-agent",
-	name: "Symbology & Frequency Analyzer",
-	model: "google/gemini-2.0-flash",
-	memory: new Memory(),
-	instructions: `You are an expert researcher in Dakila technologies, Symbology, and Wave Frequencies.
+   id: "symbology-agent",
+   name: "Symbology & Frequency Analyzer",
+   model: "google/gemini-3-pro-preview",
+   memory: new Memory(),
+   instructions: `You are an expert researcher in Dakila technologies, Symbology, and Wave Frequencies.
       Your goal is to provide a detailed analysis by cross-referencing visual inputs with the official Knowledge Base.
 
       WORKFLOW:
@@ -43,7 +43,7 @@ export const symbologyAgent = new Agent({
          - Provide a structured response (Visual Description -> Database Correlation -> Conclusion).
          - Respond in the language requested by the user (default to EN if not specified).
       `,
-	tools: {
-		vectorQueryTool,
-	},
+   tools: {
+      vectorQueryTool,
+   },
 });
