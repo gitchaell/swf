@@ -4,57 +4,86 @@ import { embedMany } from "ai";
 import "dotenv/config";
 import fs from "fs";
 import path from "path";
-import { convertMdToPdfBuffer } from "./utils/convertMdToPdf";
-import { extractTextFromPDF } from "../src/mastra/tools/mistralOCR";
+import { Mistral } from '@mistralai/mistralai';
 import crypto from "crypto";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const OUTPUT_FILE = path.join(process.cwd(), "src/mastra/rag/knowledge.json");
 
+// Define OCR logic locally here instead of importing a tool that is unused elsewhere
+async function extractTextFromPDF(pdfBuffer: Buffer): Promise<string> {
+    const client = new Mistral({ apiKey: process.env.MISTRAL_API_KEY });
+
+    const fileContent = new Uint8Array(pdfBuffer);
+    const uploadedFile = await client.files.upload({
+      file: {
+        fileName: 'uploaded_file.pdf',
+        content: fileContent,
+      },
+      purpose: 'ocr',
+    });
+
+    const signedURL = await client.files.getSignedUrl({ fileId: uploadedFile.id });
+
+    const ocrResponse = await client.ocr.process({
+      model: 'mistral-ocr-latest',
+      document: { type: 'document_url', documentUrl: signedURL.url },
+      includeImageBase64: true,
+    });
+
+    if (!ocrResponse || !ocrResponse.pages || !Array.isArray(ocrResponse.pages)) {
+      throw new Error('Invalid OCR response format');
+    }
+
+    let extractedText = '';
+    for (const page of ocrResponse.pages) {
+      if (page.markdown) {
+        extractedText += page.markdown + '\n\n';
+      }
+    }
+    return extractedText.trim();
+}
+
 async function populate() {
-	// Check for API Keys
 	if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
 		console.error("Error: GOOGLE_GENERATIVE_AI_API_KEY is not set in .env");
 		process.exit(1);
 	}
-    // Check MISTRAL_API_KEY if we are going to use it, but the tool checks it inside.
     if (!process.env.MISTRAL_API_KEY) {
-        console.warn("Warning: MISTRAL_API_KEY is not set. OCR will fail if run.");
+        console.warn("Warning: MISTRAL_API_KEY is not set. OCR will fail.");
+        process.exit(1);
     }
 
 	const files = fs.readdirSync(DATA_DIR);
-	const mdFiles = files.filter((f) => f.endsWith(".md"));
+	const pdfFiles = files.filter((f) => f.endsWith(".pdf"));
 
-	if (mdFiles.length === 0) {
-		console.log("No Markdown files found in data/");
+	if (pdfFiles.length === 0) {
+		console.log("No PDF files found in data/. Run `npm run rag:convert` first.");
 		return;
 	}
 
-	console.log(`Found ${mdFiles.length} Markdown files. Processing with Mistral OCR...`);
+	console.log(`Found ${pdfFiles.length} PDF files. Processing with Mistral OCR...`);
 
 	let allChunks: any[] = [];
 
-	// Process Markdown files
-	for (const file of mdFiles) {
+	for (const file of pdfFiles) {
 		const filePath = path.join(DATA_DIR, file);
-		const content = fs.readFileSync(filePath, "utf-8");
+		const pdfBuffer = fs.readFileSync(filePath);
 
 		console.log(`Processing ${file}...`);
 
         try {
-            // 1. Convert Markdown to PDF
-            console.log(`  - Converting to PDF...`);
-            const pdfBuffer = await convertMdToPdfBuffer(content, DATA_DIR);
-
-            // 2. Process with Mistral OCR
             console.log(`  - Sending to Mistral OCR...`);
             const extractedText = await extractTextFromPDF(pdfBuffer);
 
             console.log(`  - Extracted ${extractedText.length} characters from OCR.`);
 
-            // 3. Chunk the extracted text using MDocument (or simple chunking since it's now flat text)
-            // Using MDocument with recursive strategy for better context handling
+            // Use MDocument to chunk the text recursively
+            // Mistral returns Markdown-formatted text, so we can use MDocument to manage it,
+            // but we chunk it using 'recursive' strategy as requested.
+            // We initialize MDocument with the text content.
             const doc = MDocument.fromMarkdown(extractedText);
+
             const textChunks = await doc.chunk({
                 strategy: "recursive",
                 maxSize: 1000,
@@ -68,7 +97,7 @@ async function populate() {
                     type: "ocr_text"
                 });
             });
-            console.log(`  - Generated ${textChunks.length} chunks from OCR text.`);
+            console.log(`  - Generated ${textChunks.length} chunks.`);
 
         } catch (err) {
             console.error(`  - Error processing ${file}:`, err);
@@ -82,19 +111,14 @@ async function populate() {
 
 	console.log(`Generated ${allChunks.length} total chunks. Generating embeddings...`);
 
-	// Use google.textEmbeddingModel for embeddings
-	// Batch processing
 	const BATCH_SIZE = 50;
 	const knowledgeData: any[] = [];
-
-	console.log(`Generating embeddings in batches of ${BATCH_SIZE}...`);
 
 	for (let i = 0; i < allChunks.length; i += BATCH_SIZE) {
 		const batch = allChunks.slice(i, i + BATCH_SIZE);
 		console.log(`  - Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(allChunks.length / BATCH_SIZE)}`);
 
 		try {
-            // Use text-embedding-004 as per memory instruction for consistency
 			const { embeddings } = await embedMany({
 				model: google.textEmbeddingModel("text-embedding-004"),
 				values: batch.map((c) => c.text),
@@ -117,7 +141,6 @@ async function populate() {
 	}
 
 	if (knowledgeData.length > 0) {
-        // Create directory if it doesn't exist
         const dir = path.dirname(OUTPUT_FILE);
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });

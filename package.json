@@ -8,7 +8,8 @@
 		"build": "astro build",
 		"preview": "astro preview",
 		"astro": "astro",
-		"rag:populate": "tsx scripts/populate-rag.ts"
+		"rag:populate": "tsx scripts/populate-rag.ts",
+		"rag:convert": "tsx scripts/convert-md-to-pdf.ts"
 	},
 	"dependencies": {
 		"@ai-sdk/google": "^3.0.21",
