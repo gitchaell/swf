@@ -1,7 +1,7 @@
 import { OrbitControls, shaderMaterial } from "@react-three/drei";
 import { Canvas, extend, useFrame } from "@react-three/fiber";
 import { Bloom, EffectComposer } from "@react-three/postprocessing";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 
 const NeonMaterial = shaderMaterial(
@@ -55,6 +55,12 @@ const GlowingPlane = ({ texture }: { texture: THREE.Texture }) => {
 		</mesh>
 	);
 };
+
+// Helper for state + ref pattern
+function useRefAndState<T>(initialValue: T): [T, (value: T) => void] {
+	const [state, setState] = useState<T>(initialValue);
+	return [state, setState];
+}
 
 export const NeonViewer = ({ imageUrl }: { imageUrl: string | null }) => {
 	const [processedTexture, setProcessedTexture] = useRefAndState<THREE.Texture | null>(null);
@@ -177,7 +183,7 @@ export const NeonViewer = ({ imageUrl }: { imageUrl: string | null }) => {
 		);
 
 	return (
-		<div className="w-full h-full bg-black/80 rounded-lg overflow-hidden border border-primary/20 shadow-[0_0_30px_rgba(224,238,34,0.1)] relative group">
+		<div className="w-full h-full bg-black/80 rounded-lg overflow-hidden border border-primary/20 shadow-[0_0_30px_rgba(224,238,34,0.1)] relative group touch-none">
 			<div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(224,238,34,0.05),transparent_70%)] pointer-events-none" />
 			<Canvas camera={{ position: [0, 0, 6] }}>
 				<color attach="background" args={["#000000"]} />
@@ -186,16 +192,13 @@ export const NeonViewer = ({ imageUrl }: { imageUrl: string | null }) => {
 				<EffectComposer>
 					<Bloom luminanceThreshold={0.1} luminanceSmoothing={0.9} intensity={1.5} />
 				</EffectComposer>
-				<OrbitControls minPolarAngle={Math.PI / 4} maxPolarAngle={Math.PI * 0.75} />
+				<OrbitControls
+					minPolarAngle={Math.PI / 4}
+					maxPolarAngle={Math.PI * 0.75}
+					enableZoom={true}
+					enablePan={false}
+				/>
 			</Canvas>
 		</div>
 	);
 };
-
-// Helper for state + ref pattern if needed, or just use useState
-import { useEffect, useState } from "react";
-
-function useRefAndState<T>(initialValue: T): [T, (value: T) => void] {
-	const [state, setState] = useState<T>(initialValue);
-	return [state, setState];
-}
