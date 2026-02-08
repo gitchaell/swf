@@ -4,12 +4,14 @@ import { symbologyAgent } from "./agent";
 
 const vectorStore = new LibSQLVector({
 	id: "vector-store",
-	url: ":memory:",
+	url: process.env.LIBSQL_URL || ":memory:",
+	authToken: process.env.LIBSQL_AUTH_TOKEN,
 });
 
 const storage = new LibSQLStore({
 	id: "mastra-storage",
-	url: ":memory:",
+	url: process.env.LIBSQL_URL || ":memory:",
+	authToken: process.env.LIBSQL_AUTH_TOKEN,
 });
 
 // Static import ensures bundle inclusion for Vercel
