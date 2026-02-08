@@ -12,7 +12,7 @@ if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
 const vectorQueryTool = createVectorQueryTool({
    vectorStoreName: "vectorStore",
    indexName: "embeddings",
-   model: new ModelRouterEmbeddingModel("google/gemini-embedding-001"),
+   model: new ModelRouterEmbeddingModel("google/text-embedding-004"),
    includeVectors: true,
    includeSources: true,
    description: "Use this tool to query the Knowledge Base for information about symbols and frequencies.",
