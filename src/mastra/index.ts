@@ -19,25 +19,33 @@ import knowledge from "./rag/knowledge.json";
 // Seed the vector store on startup
 // Using top-level await to ensure this completes before the module exports 'mastra'
 try {
-	if (Array.isArray(knowledge) && knowledge.length > 0) {
+	// Robust check for knowledge data (handle both direct array and module default export)
+	// @ts-ignore
+	const knowledgeData = Array.isArray(knowledge) ? knowledge : (knowledge?.default as any[]);
+
+	if (!Array.isArray(knowledgeData)) {
+		console.error("Critical Warning: 'knowledge.json' is not an array. Vector store seeding skipped.");
+	} else if (knowledgeData.length === 0) {
+		console.warn("Warning: 'knowledge.json' is empty. Vector store seeding skipped.");
+	} else {
 		// Create index explicitly
 		await vectorStore.createIndex({
 			indexName: "embeddings",
-			dimension: 3072,
+			dimension: 768, // text-embedding-004 dimension
 		});
 
 		// Insert data
 		await vectorStore.upsert({
 			indexName: "embeddings",
-			vectors: knowledge.map((k: any) => k.vector),
-			metadata: knowledge.map((k: any) => ({
+			vectors: knowledgeData.map((k: any) => k.vector),
+			metadata: knowledgeData.map((k: any) => ({
 				text: k.text,
 				source: k.metadata.source,
 				originalImage: k.metadata.originalImage, // meaningful if present
 			})),
-			ids: knowledge.map((k: any) => k.id),
+			ids: knowledgeData.map((k: any) => k.id),
 		});
-		console.log(`Vector store seeded with ${knowledge.length} records.`);
+		console.log(`Vector store seeded with ${knowledgeData.length} records.`);
 	}
 } catch (error) {
 	console.error("Critical Error: Failed to seed vector store.", error);
