@@ -23,17 +23,17 @@ try {
 	// @ts-ignore
 	const knowledgeData = Array.isArray(knowledge) ? knowledge : (knowledge?.default as any[]);
 
+	// Always create index to prevent "no such table" errors in agent
+	await vectorStore.createIndex({
+		indexName: "embeddings",
+		dimension: 768, // text-embedding-004 dimension
+	});
+
 	if (!Array.isArray(knowledgeData)) {
 		console.error("Critical Warning: 'knowledge.json' is not an array. Vector store seeding skipped.");
 	} else if (knowledgeData.length === 0) {
 		console.warn("Warning: 'knowledge.json' is empty. Vector store seeding skipped.");
 	} else {
-		// Create index explicitly
-		await vectorStore.createIndex({
-			indexName: "embeddings",
-			dimension: 768, // text-embedding-004 dimension
-		});
-
 		// Insert data
 		await vectorStore.upsert({
 			indexName: "embeddings",
