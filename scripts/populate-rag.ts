@@ -78,10 +78,6 @@ async function populate() {
 
 			console.log(`  - Extracted ${extractedText.length} characters from OCR.`);
 
-			// Use MDocument to chunk the text recursively
-			// Mistral returns Markdown-formatted text, so we can use MDocument to manage it,
-			// but we chunk it using 'recursive' strategy as requested.
-			// We initialize MDocument with the text content.
 			const doc = MDocument.fromMarkdown(extractedText);
 
 			const textChunks = await doc.chunk({
@@ -120,7 +116,7 @@ async function populate() {
 
 		try {
 			const { embeddings } = await embedMany({
-				model: google.textEmbeddingModel("text-embedding-004"),
+				model: google.textEmbeddingModel("gemini-embedding-001"),
 				values: batch.map((c) => c.text),
 			});
 
