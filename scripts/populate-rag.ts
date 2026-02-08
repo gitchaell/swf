@@ -53,10 +53,10 @@ async function populate() {
             console.log(`  - Extracted ${extractedText.length} characters from OCR.`);
 
             // 3. Chunk the extracted text using MDocument (or simple chunking since it's now flat text)
-            // Using MDocument with markdown strategy on the OCR result (which is markdown)
+            // Using MDocument with recursive strategy for better context handling
             const doc = MDocument.fromMarkdown(extractedText);
             const textChunks = await doc.chunk({
-                strategy: "markdown",
+                strategy: "recursive",
                 maxSize: 1000,
                 overlap: 100,
             });
