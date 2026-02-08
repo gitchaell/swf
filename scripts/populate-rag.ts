@@ -29,6 +29,36 @@ async function extractTextFromPDF(pdfBuffer: Buffer): Promise<string> {
 		model: 'mistral-ocr-latest',
 		document: { type: 'document_url', documentUrl: signedURL.url },
 		includeImageBase64: true,
+		bboxAnnotationFormat: {
+			type: "json_schema",
+			jsonSchema: {
+				name: "image_analysis",
+				schemaDefinition: {
+					type: "object",
+					title: "ImageAnalysis",
+					properties: {
+						visual_description: {
+							type: "string",
+							description: "Describe in detail the shapes, structures, colors, textures, and visual composition of the image."
+						},
+						text_content: {
+							type: "string",
+							description: "Transcribe any visible text within the image, if it exists."
+						},
+						interpretation: {
+							type: "string",
+							description: "Analyze the semantic meaning, the purpose of the image, and its relationship to the document's context."
+						},
+						key_entities: {
+							type: "array",
+							items: { type: "string" },
+							description: "List the key entities, objects, or figures identified in the image."
+						}
+					},
+					required: ["visual_description", "interpretation", "key_entities"]
+				}
+			}
+		}
 	});
 
 	if (!ocrResponse || !ocrResponse.pages || !Array.isArray(ocrResponse.pages)) {
