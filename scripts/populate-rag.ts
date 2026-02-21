@@ -1,5 +1,6 @@
 import { google } from "@ai-sdk/google";
 import { MDocument } from "@mastra/rag";
+import { LibSQLVector } from "@mastra/libsql";
 import { Mistral } from '@mistralai/mistralai';
 import { embedMany } from "ai";
 import crypto from "crypto";
@@ -84,6 +85,12 @@ async function populate() {
 		process.exit(1);
 	}
 
+	const vectorStore = new LibSQLVector({
+		id: "vector-store",
+		url: process.env.LIBSQL_URL || ":memory:",
+		authToken: process.env.LIBSQL_AUTH_TOKEN,
+	});
+
 	const files = fs.readdirSync(DATA_DIR);
 	const pdfFiles = files.filter((f) => f.endsWith(".pdf"));
 
@@ -93,6 +100,13 @@ async function populate() {
 	}
 
 	console.log(`Found ${pdfFiles.length} PDF files. Processing with Mistral OCR...`);
+
+	// Ensure the index exists
+	await vectorStore.createIndex({
+		indexName: "embeddings",
+		dimension: 768, // Matches google/text-embedding-004 / gemini-embedding-001
+	});
+	console.log("Vector store index 'embeddings' (768d) ensured.");
 
 	let allChunks: any[] = [];
 
@@ -135,7 +149,7 @@ async function populate() {
 		return;
 	}
 
-	console.log(`Generated ${allChunks.length} total chunks. Generating embeddings...`);
+	console.log(`Generated ${allChunks.length} total chunks. Generating embeddings, upserting to LibSQL, and saving to JSON...`);
 
 	const BATCH_SIZE = 50;
 	const knowledgeData: any[] = [];
@@ -150,9 +164,27 @@ async function populate() {
 				values: batch.map((c) => c.text),
 			});
 
+			// Prepare IDs for this batch
+			const batchIds = batch.map(() => crypto.randomUUID());
+
+			// Upsert to LibSQL
+			await vectorStore.upsert({
+				indexName: "embeddings",
+				vectors: embeddings,
+				metadata: batch.map((c) => ({
+					text: c.text,
+					source: c.source,
+					type: c.type,
+				})),
+				ids: batchIds,
+			});
+
+            console.log(`    - Upserted ${batch.length} vectors to LibSQL.`);
+
+			// Collect for JSON file
 			batch.forEach((chunk, idx) => {
 				knowledgeData.push({
-					id: crypto.randomUUID(),
+					id: batchIds[idx],
 					text: chunk.text,
 					vector: embeddings[idx],
 					metadata: {
@@ -161,11 +193,13 @@ async function populate() {
 					},
 				});
 			});
+
 		} catch (err) {
-			console.error(`  - Error generating embeddings for batch starting at index ${i}:`, err);
+			console.error(`  - Error generating/upserting embeddings for batch starting at index ${i}:`, err);
 		}
 	}
 
+	// Save to JSON file as requested
 	if (knowledgeData.length > 0) {
 		const dir = path.dirname(OUTPUT_FILE);
 		if (!fs.existsSync(dir)) {
@@ -174,6 +208,8 @@ async function populate() {
 		fs.writeFileSync(OUTPUT_FILE, JSON.stringify(knowledgeData, null, 2));
 		console.log(`Successfully saved ${knowledgeData.length} records to ${OUTPUT_FILE}`);
 	}
+
+    console.log("Population complete.");
 }
 
 populate().catch(console.error);
