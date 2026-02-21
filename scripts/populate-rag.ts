@@ -9,6 +9,7 @@ import fs from "fs";
 import path from "path";
 
 const DATA_DIR = path.join(process.cwd(), "data");
+const OUTPUT_FILE = path.join(process.cwd(), "src/mastra/rag/knowledge.json");
 
 // Define OCR logic locally here instead of importing a tool that is unused elsewhere
 async function extractTextFromPDF(pdfBuffer: Buffer): Promise<string> {
@@ -148,9 +149,10 @@ async function populate() {
 		return;
 	}
 
-	console.log(`Generated ${allChunks.length} total chunks. Generating embeddings and upserting...`);
+	console.log(`Generated ${allChunks.length} total chunks. Generating embeddings, upserting to LibSQL, and saving to JSON...`);
 
 	const BATCH_SIZE = 50;
+	const knowledgeData: any[] = [];
 
 	for (let i = 0; i < allChunks.length; i += BATCH_SIZE) {
 		const batch = allChunks.slice(i, i + BATCH_SIZE);
@@ -162,6 +164,10 @@ async function populate() {
 				values: batch.map((c) => c.text),
 			});
 
+			// Prepare IDs for this batch
+			const batchIds = batch.map(() => crypto.randomUUID());
+
+			// Upsert to LibSQL
 			await vectorStore.upsert({
 				indexName: "embeddings",
 				vectors: embeddings,
@@ -170,15 +176,39 @@ async function populate() {
 					source: c.source,
 					type: c.type,
 				})),
-				ids: batch.map(() => crypto.randomUUID()),
+				ids: batchIds,
 			});
 
             console.log(`    - Upserted ${batch.length} vectors to LibSQL.`);
+
+			// Collect for JSON file
+			batch.forEach((chunk, idx) => {
+				knowledgeData.push({
+					id: batchIds[idx],
+					text: chunk.text,
+					vector: embeddings[idx],
+					metadata: {
+						source: chunk.source,
+						type: chunk.type,
+					},
+				});
+			});
 
 		} catch (err) {
 			console.error(`  - Error generating/upserting embeddings for batch starting at index ${i}:`, err);
 		}
 	}
+
+	// Save to JSON file as requested
+	if (knowledgeData.length > 0) {
+		const dir = path.dirname(OUTPUT_FILE);
+		if (!fs.existsSync(dir)) {
+			fs.mkdirSync(dir, { recursive: true });
+		}
+		fs.writeFileSync(OUTPUT_FILE, JSON.stringify(knowledgeData, null, 2));
+		console.log(`Successfully saved ${knowledgeData.length} records to ${OUTPUT_FILE}`);
+	}
+
     console.log("Population complete.");
 }
 
