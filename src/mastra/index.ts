@@ -14,36 +14,14 @@ const storage = new LibSQLStore({
 	authToken: process.env.LIBSQL_AUTH_TOKEN,
 });
 
-import knowledge from "./rag/knowledge.json";
-
 try {
-	// @ts-ignore
-	const knowledgeData = Array.isArray(knowledge) ? knowledge : (knowledge?.default as any[]);
-
+	// Ensure the index exists at startup to prevent "no such table" errors
 	await vectorStore.createIndex({
 		indexName: "embeddings",
-		dimension: 3072,
+		dimension: 768, // Using 768 to match google/text-embedding-004
 	});
-
-	if (!Array.isArray(knowledgeData)) {
-		console.error("Critical Warning: 'knowledge.json' is not an array. Vector store seeding skipped.");
-	} else if (knowledgeData.length === 0) {
-		console.warn("Warning: 'knowledge.json' is empty. Vector store seeding skipped.");
-	} else {
-		await vectorStore.upsert({
-			indexName: "embeddings",
-			vectors: knowledgeData.map((k: any) => k.vector),
-			metadata: knowledgeData.map((k: any) => ({
-				text: k.text,
-				source: k.metadata.source,
-				originalImage: k.metadata.originalImage,
-			})),
-			ids: knowledgeData.map((k: any) => k.id),
-		});
-		console.log(`Vector store seeded with ${knowledgeData.length} records.`);
-	}
 } catch (error) {
-	console.error("Critical Error: Failed to seed vector store.", error);
+	console.error("Critical Error: Failed to ensure vector store index.", error);
 }
 
 export const mastra = new Mastra({

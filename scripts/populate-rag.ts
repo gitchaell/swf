@@ -1,5 +1,6 @@
 import { google } from "@ai-sdk/google";
 import { MDocument } from "@mastra/rag";
+import { LibSQLVector } from "@mastra/libsql";
 import { Mistral } from '@mistralai/mistralai';
 import { embedMany } from "ai";
 import crypto from "crypto";
@@ -8,7 +9,6 @@ import fs from "fs";
 import path from "path";
 
 const DATA_DIR = path.join(process.cwd(), "data");
-const OUTPUT_FILE = path.join(process.cwd(), "src/mastra/rag/knowledge.json");
 
 // Define OCR logic locally here instead of importing a tool that is unused elsewhere
 async function extractTextFromPDF(pdfBuffer: Buffer): Promise<string> {
@@ -84,6 +84,12 @@ async function populate() {
 		process.exit(1);
 	}
 
+	const vectorStore = new LibSQLVector({
+		id: "vector-store",
+		url: process.env.LIBSQL_URL || ":memory:",
+		authToken: process.env.LIBSQL_AUTH_TOKEN,
+	});
+
 	const files = fs.readdirSync(DATA_DIR);
 	const pdfFiles = files.filter((f) => f.endsWith(".pdf"));
 
@@ -93,6 +99,13 @@ async function populate() {
 	}
 
 	console.log(`Found ${pdfFiles.length} PDF files. Processing with Mistral OCR...`);
+
+	// Ensure the index exists
+	await vectorStore.createIndex({
+		indexName: "embeddings",
+		dimension: 768, // Matches google/text-embedding-004 / gemini-embedding-001
+	});
+	console.log("Vector store index 'embeddings' (768d) ensured.");
 
 	let allChunks: any[] = [];
 
@@ -135,10 +148,9 @@ async function populate() {
 		return;
 	}
 
-	console.log(`Generated ${allChunks.length} total chunks. Generating embeddings...`);
+	console.log(`Generated ${allChunks.length} total chunks. Generating embeddings and upserting...`);
 
 	const BATCH_SIZE = 50;
-	const knowledgeData: any[] = [];
 
 	for (let i = 0; i < allChunks.length; i += BATCH_SIZE) {
 		const batch = allChunks.slice(i, i + BATCH_SIZE);
@@ -150,30 +162,24 @@ async function populate() {
 				values: batch.map((c) => c.text),
 			});
 
-			batch.forEach((chunk, idx) => {
-				knowledgeData.push({
-					id: crypto.randomUUID(),
-					text: chunk.text,
-					vector: embeddings[idx],
-					metadata: {
-						source: chunk.source,
-						type: chunk.type,
-					},
-				});
+			await vectorStore.upsert({
+				indexName: "embeddings",
+				vectors: embeddings,
+				metadata: batch.map((c) => ({
+					text: c.text,
+					source: c.source,
+					type: c.type,
+				})),
+				ids: batch.map(() => crypto.randomUUID()),
 			});
-		} catch (err) {
-			console.error(`  - Error generating embeddings for batch starting at index ${i}:`, err);
-		}
-	}
 
-	if (knowledgeData.length > 0) {
-		const dir = path.dirname(OUTPUT_FILE);
-		if (!fs.existsSync(dir)) {
-			fs.mkdirSync(dir, { recursive: true });
+            console.log(`    - Upserted ${batch.length} vectors to LibSQL.`);
+
+		} catch (err) {
+			console.error(`  - Error generating/upserting embeddings for batch starting at index ${i}:`, err);
 		}
-		fs.writeFileSync(OUTPUT_FILE, JSON.stringify(knowledgeData, null, 2));
-		console.log(`Successfully saved ${knowledgeData.length} records to ${OUTPUT_FILE}`);
 	}
+    console.log("Population complete.");
 }
 
 populate().catch(console.error);
